@@ -30,9 +30,10 @@ export default function Navbar() {
       }`}
       style={{ borderColor: scrolled ? 'var(--border)' : 'transparent' }}
     >
-      <div className="max-w-6xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2.5 group">
+      <div className="pt-[env(safe-area-inset-top,0px)]">
+        <div className="max-w-6xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-2.5 group">
           <div className="relative">
             <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-[var(--primary)] to-[var(--secondary)] opacity-70 blur-md group-hover:opacity-100 transition-opacity" />
             <BrandLogo size={32} />
@@ -40,10 +41,10 @@ export default function Navbar() {
           <span className="font-extrabold text-[17px] tracking-tight text-[var(--text)]">
             sync<span className="gradient-text">.music</span>
           </span>
-        </Link>
+          </Link>
 
-        {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-1">
+          {/* Desktop nav */}
+          <div className="hidden md:flex items-center gap-1">
           {links.map((l) =>
             l.external ? (
               <a
@@ -74,17 +75,18 @@ export default function Navbar() {
           >
             Start Listening →
           </Link>
-        </div>
+          </div>
 
-        {/* Mobile burger */}
-        <div className="md:hidden flex items-center gap-2">
-          <ThemeToggle size="sm" />
-          <button
-            className="w-9 h-9 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--text)] transition-colors"
-            onClick={() => setOpen(!open)}
-          >
-            {open ? <X size={18} /> : <Menu size={18} />}
-          </button>
+          {/* Mobile burger */}
+          <div className="md:hidden flex items-center gap-2">
+            <ThemeToggle size="sm" />
+            <button
+              className="w-9 h-9 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center text-[var(--muted)] hover:text-[var(--text)] transition-colors"
+              onClick={() => setOpen(!open)}
+            >
+              {open ? <X size={18} /> : <Menu size={18} />}
+            </button>
+          </div>
         </div>
       </div>
 

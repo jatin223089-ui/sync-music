@@ -4,20 +4,25 @@
  * by averaging multiple round-trip measurements.
  */
 export class NTPSync {
-  constructor(socket, sampleCount = 5) {
+  constructor(socket, sampleCount = 5, requestTimeoutMs = 2000) {
     this.socket = socket;
     this.sampleCount = sampleCount;
+    this.requestTimeoutMs = requestTimeoutMs;
     this.offset = 0;
     this.synced = false;
   }
 
-  async sync() {
+  async sync(options = {}) {
+    const { signal } = options;
     const samples = [];
 
     for (let i = 0; i < this.sampleCount; i++) {
-      const sample = await this._measure();
+      if (signal?.aborted) {
+        throw new Error('NTP sync aborted');
+      }
+      const sample = await this._measure(options);
       samples.push(sample);
-      await sleep(100);
+      await sleep(100, signal);
     }
 
     // Discard outliers (highest RTT) and average the rest
@@ -25,20 +30,40 @@ export class NTPSync {
     const trimmed = samples.slice(0, Math.ceil(this.sampleCount * 0.8));
     this.offset = trimmed.reduce((sum, s) => sum + s.offset, 0) / trimmed.length;
     this.synced = true;
-    console.log(`[NTP] Clock offset: ${this.offset.toFixed(2)}ms`);
     return this.offset;
   }
 
-  _measure() {
-    return new Promise((resolve) => {
+  _measure(options = {}) {
+    const { signal, timeoutMs = this.requestTimeoutMs } = options;
+    return new Promise((resolve, reject) => {
+      if (signal?.aborted) {
+        reject(new Error('NTP sync aborted'));
+        return;
+      }
+
       const clientSendTime = Date.now();
-      this.socket.emit('ntp:request', { clientSendTime });
-      this.socket.once('ntp:response', ({ clientSendTime, serverReceiveTime, serverSendTime }) => {
+      const onResponse = ({ clientSendTime, serverReceiveTime, serverSendTime }) => {
+        clearTimeout(timeoutId);
+        if (signal) signal.removeEventListener('abort', onAbort);
         const clientReceiveTime = Date.now();
         const rtt = clientReceiveTime - clientSendTime;
         const offset = (serverReceiveTime + serverSendTime - clientSendTime - clientReceiveTime) / 2;
         resolve({ offset, rtt });
-      });
+      };
+      const onAbort = () => {
+        clearTimeout(timeoutId);
+        this.socket.off('ntp:response', onResponse);
+        reject(new Error('NTP sync aborted'));
+      };
+      const timeoutId = setTimeout(() => {
+        this.socket.off('ntp:response', onResponse);
+        if (signal) signal.removeEventListener('abort', onAbort);
+        reject(new Error('NTP sync timeout'));
+      }, timeoutMs);
+
+      if (signal) signal.addEventListener('abort', onAbort, { once: true });
+      this.socket.emit('ntp:request', { clientSendTime });
+      this.socket.once('ntp:response', onResponse);
     });
   }
 
@@ -57,6 +82,20 @@ export class NTPSync {
   }
 }
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function sleep(ms, signal) {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new Error('NTP sync aborted'));
+      return;
+    }
+    const timeoutId = setTimeout(() => {
+      if (signal) signal.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timeoutId);
+      reject(new Error('NTP sync aborted'));
+    };
+    if (signal) signal.addEventListener('abort', onAbort, { once: true });
+  });
 }

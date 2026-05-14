@@ -6,6 +6,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+server/uploads/
 
 # Logs
 npm-debug.log*

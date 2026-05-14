@@ -79,6 +79,20 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.4s ease, color 0.4s ease;
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+#root {
+  min-height: 100dvh;
+  min-height: 100vh;
+}
+
+/** iOS Safari: avoid 100vh clipping when browser chrome appears */
+@supports (min-height: 100dvh) {
+  #root {
+    min-height: 100dvh;
+  }
 }
 
 /* Accessible keyboard focus */

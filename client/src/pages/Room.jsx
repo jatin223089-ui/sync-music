@@ -39,6 +39,7 @@ export default function Room() {
   const [joinError, setJoinError] = useState('');
   const [showShare, setShowShare] = useState(false);
   const ntpRef = useRef(null);
+  const joinSessionRef = useRef('');
 
   const {
     isPlaying, currentTime, duration, volume, analyserData,
@@ -47,82 +48,153 @@ export default function Room() {
 
   const myId = socket?.id;
   const isHost = room?.hostId === myId;
-  const currentTrack = room?.playlist?.[room?.playbackState?.trackIndex] || null;
+  const currentTrack = room?.playlist?.[room?.playbackState?.trackIndex] || room?.currentTrack || null;
+
+  useEffect(() => {
+    if (!connected) {
+      joinSessionRef.current = '';
+    }
+  }, [connected]);
 
   /* ── NTP Sync + room join ───────────────────────── */
   useEffect(() => {
     if (!socket || !connected) return;
+    const sessionKey = `${socket.id || 'unknown'}:${code || ''}`;
+    if (joinSessionRef.current === sessionKey) return;
+    joinSessionRef.current = sessionKey;
+
+    const controller = new AbortController();
+    let cancelled = false;
+    setJoining(true);
+    setJoinError('');
 
     const init = async () => {
-      ntpRef.current = new NTPSync(socket);
-      const offset = await ntpRef.current.sync();
-      setNtpOffset(offset);
+      try {
+        ntpRef.current = new NTPSync(socket);
+        let offset = 0;
+        try {
+          offset = await ntpRef.current.sync({ signal: controller.signal });
+        } catch {
+          // Continue with join even if NTP probes fail.
+        }
+        if (cancelled) return;
+        setNtpOffset(offset);
 
-      if (code === 'new') {
-        socket.emit('room:create', { userName: userName || 'Host' }, (res) => {
-          if (res.success) {
-            setRoom(res.room);
-            navigate(`/room/${res.room.code}`, { replace: true });
-          } else {
-            setJoinError('Failed to create room');
-          }
-          setJoining(false);
-        });
-      } else {
+        if (code === 'new') {
+          socket.emit('room:create', { userName: userName || 'Host' }, (res) => {
+            if (cancelled) return;
+            if (res?.success) {
+              setRoom(res.room);
+              navigate(`/room/${res.room.code}`, { replace: true });
+            } else {
+              setJoinError('Failed to create room');
+            }
+            setJoining(false);
+          });
+          return;
+        }
+
         socket.emit('room:join', { code, userName: userName || 'Listener' }, (res) => {
-          if (res.success) {
+          if (cancelled) return;
+          if (res?.success) {
             setRoom(res.room);
             setChatMessages(res.room.chat || []);
           } else {
-            setJoinError(res.error || 'Room not found');
+            setJoinError(res?.error || 'Room not found');
           }
           setJoining(false);
         });
+      } catch {
+        if (cancelled) return;
+        setJoinError('Unable to join room right now');
+        setJoining(false);
       }
     };
 
-    init();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [socket, connected]);
+    const joinTimeout = setTimeout(() => {
+      if (cancelled) return;
+      setJoinError('Joining timed out. Please try again.');
+      setJoining(false);
+    }, 10000);
+
+    init().finally(() => {
+      clearTimeout(joinTimeout);
+    });
+
+    return () => {
+      cancelled = true;
+      clearTimeout(joinTimeout);
+      controller.abort();
+    };
+  }, [socket, connected, code, userName, setRoom, navigate]);
 
   /* ── Socket event listeners ─────────────────────── */
   useEffect(() => {
     if (!socket) return;
 
-    socket.on('room:participant_joined', ({ participants }) => {
+    const handleParticipantJoined = ({ participants }) => {
       setRoom((r) => r ? { ...r, participants } : r);
-    });
+    };
 
-    socket.on('room:participant_left', ({ participants, newHostId }) => {
+    const handleParticipantLeft = ({ participants, newHostId }) => {
       setRoom((r) => r ? { ...r, participants, hostId: newHostId } : r);
-    });
+    };
 
-    socket.on('track:added', ({ playlist, currentTrack }) => {
-      setRoom((r) => r ? { ...r, playlist, currentTrack } : r);
-    });
+    const handleTrackAdded = ({ playlist, currentTrack: nextTrack, trackIndex }) => {
+      setRoom((r) => {
+        if (!r) return r;
+        const nextIndex = Number.isInteger(trackIndex) ? trackIndex : r.playbackState?.trackIndex;
+        return {
+          ...r,
+          playlist,
+          currentTrack: nextTrack,
+          playbackState: { ...r.playbackState, trackIndex: nextIndex },
+        };
+      });
+    };
 
-    socket.on('playback:track_changed', ({ trackIndex, currentTrack }) => {
+    const handleTrackChanged = ({ trackIndex, currentTrack }) => {
       setRoom((r) => r ? { ...r, playbackState: { ...r.playbackState, trackIndex, isPlaying: true }, currentTrack } : r);
-      if (currentTrack?.url) loadAudio(currentTrack.url);
-    });
+    };
 
-    socket.on('chat:message', (msg) => {
+    const handlePlaybackSync = ({ trackIndex, currentTrack: syncedTrack }) => {
+      setRoom((r) => {
+        if (!r) return r;
+        const nextIndex = Number.isInteger(trackIndex) ? trackIndex : r.playbackState?.trackIndex;
+        return {
+          ...r,
+          currentTrack: syncedTrack || r.currentTrack,
+          playbackState: { ...r.playbackState, trackIndex: nextIndex },
+        };
+      });
+    };
+
+    const handleChatMessage = (msg) => {
       setChatMessages((prev) => [...prev, msg]);
-    });
+    };
 
-    socket.on('spatial:positions', ({ userId, position }) => {
+    const handleSpatialPositions = ({ userId, position }) => {
       setSpatialPositions((prev) => ({ ...prev, [userId]: position }));
-    });
+    };
+
+    socket.on('room:participant_joined', handleParticipantJoined);
+    socket.on('room:participant_left', handleParticipantLeft);
+    socket.on('track:added', handleTrackAdded);
+    socket.on('playback:track_changed', handleTrackChanged);
+    socket.on('playback:sync', handlePlaybackSync);
+    socket.on('chat:message', handleChatMessage);
+    socket.on('spatial:positions', handleSpatialPositions);
 
     return () => {
-      socket.off('room:participant_joined');
-      socket.off('room:participant_left');
-      socket.off('track:added');
-      socket.off('playback:track_changed');
-      socket.off('chat:message');
-      socket.off('spatial:positions');
+      socket.off('room:participant_joined', handleParticipantJoined);
+      socket.off('room:participant_left', handleParticipantLeft);
+      socket.off('track:added', handleTrackAdded);
+      socket.off('playback:track_changed', handleTrackChanged);
+      socket.off('playback:sync', handlePlaybackSync);
+      socket.off('chat:message', handleChatMessage);
+      socket.off('spatial:positions', handleSpatialPositions);
     };
-  }, [socket, loadAudio]);
+  }, [socket, setRoom]);
 
   useEffect(() => {
     if (currentTrack?.url) loadAudio(currentTrack.url);
@@ -154,19 +226,18 @@ export default function Room() {
 
   const handleAddTrack = useCallback((track) => {
     socket.emit('track:add', { code: room?.code, track }, (res) => {
-      if (res?.success && !currentTrack) loadAudio(track.url);
+      if (!res?.success) setJoinError('Failed to add track');
     });
-  }, [socket, room, currentTrack, loadAudio]);
+  }, [socket, room]);
 
   const handleSelectTrack = useCallback((index) => {
     const track = room?.playlist?.[index];
     if (!track || !room?.code) return;
     setRoom((r) => r ? { ...r, playbackState: { ...r.playbackState, trackIndex: index }, currentTrack: track } : r);
-    loadAudio(track.url);
     const serverTime = (ntpRef.current?.serverNow() || Date.now()) + 300;
     socket.emit('playback:play', { code: room.code, serverTime, currentTime: 0, trackIndex: index });
     play(serverTime);
-  }, [socket, room, loadAudio, play, setRoom]);
+  }, [socket, room, play, setRoom]);
 
   const handleChat = useCallback((message) => {
     socket.emit('chat:send', { code: room?.code, message, userName: userName || 'User' });
@@ -178,10 +249,16 @@ export default function Room() {
     navigate('/');
   };
 
-  const copyCode = () => {
-    navigator.clipboard.writeText(room?.code || '');
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const copyCode = async () => {
+    const text = room?.code || '';
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard API unavailable');
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.prompt('Copy room code:', text);
+    }
   };
 
   /* ── Loading state ──────────────────────────────── */
@@ -239,7 +316,7 @@ export default function Room() {
 
   /* ── Main render ────────────────────────────────── */
   return (
-    <div className="min-h-screen bg-[var(--bg)] flex flex-col relative overflow-hidden">
+    <div className="min-h-[100dvh] max-h-[100dvh] lg:min-h-screen lg:max-h-none bg-[var(--bg)] flex flex-col relative overflow-hidden">
 
       {/* Ambient background orbs */}
       <div className="orb orb-purple w-[700px] h-[700px] top-[-200px] left-[-150px] animate-orb-1 opacity-40 pointer-events-none" />
@@ -250,7 +327,7 @@ export default function Room() {
 
       {/* ═══ ROOM HEADER ═══ */}
       <header
-        className="relative z-30 glass border-b px-3 sm:px-5 h-14 flex items-center justify-between sticky top-0"
+        className="relative z-30 glass border-b px-3 sm:px-5 flex items-center justify-between sticky top-0 pt-[env(safe-area-inset-top,0px)] min-h-[calc(3.5rem+env(safe-area-inset-top,0px))]"
         style={{
           borderColor: 'color-mix(in srgb, var(--border) 70%, transparent)',
           boxShadow: '0 1px 30px rgba(0,0,0,0.15)',
@@ -328,11 +405,11 @@ export default function Room() {
       </header>
 
       {/* ═══ MAIN CONTENT ═══ */}
-      <div className="relative z-10 flex-1 flex flex-col lg:flex-row overflow-hidden">
+      <div className="relative z-10 flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
 
         {/* ── LEFT SIDEBAR ── */}
         <aside
-          className="lg:w-[300px] xl:w-[340px] flex-shrink-0 flex flex-col border-r"
+          className="lg:w-[300px] xl:w-[340px] flex flex-col border-r flex-1 min-h-0 basis-0 lg:flex-none lg:basis-auto lg:flex-shrink-0"
           style={{ borderColor: 'color-mix(in srgb, var(--border) 60%, transparent)', background: 'color-mix(in srgb, var(--bg) 80%, transparent)' }}
         >
           {/* Mobile tab bar */}
@@ -449,7 +526,7 @@ export default function Room() {
           </div>
 
           {/* Player area */}
-          <div className="flex-1 px-4 py-6 sm:px-6 sm:py-8 flex flex-col justify-center items-center min-h-0 overflow-y-auto">
+          <div className="flex-1 px-4 py-6 sm:px-6 sm:py-8 flex flex-col justify-center items-center min-h-0 overflow-y-auto pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:pb-8">
             <AudioPlayer
               currentTrack={currentTrack}
               isPlaying={isPlaying}

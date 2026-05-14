@@ -2,6 +2,9 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 const {
   createRoom,
   joinRoom,
@@ -14,13 +17,66 @@ const {
   getRoomStats,
 } = require('./rooms');
 
+const ROOM_CODE_REGEX = /^[A-Z0-9]{6}$/;
+const MAX_CHAT_LENGTH = 500;
+const ALLOWED_AUDIO_MIME = new Set([
+  'audio/mpeg',
+  'audio/mp3',
+  'audio/wav',
+  'audio/x-wav',
+  'audio/ogg',
+  'audio/webm',
+  'audio/mp4',
+  'audio/x-m4a',
+  'audio/aac',
+  'audio/flac',
+]);
+const ALLOWED_AUDIO_EXT = new Set(['.mp3', '.wav', '.ogg', '.webm', '.mp4', '.m4a', '.aac', '.flac']);
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '*')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const corsOptions = {
+  origin: ALLOWED_ORIGINS.includes('*') ? '*' : ALLOWED_ORIGINS,
+  methods: ['GET', 'POST'],
+};
+
 const app = express();
-app.use(cors());
+app.set('trust proxy', true);
+app.use(cors(corsOptions));
 app.use(express.json());
+
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (_, __, cb) => cb(null, uploadsDir),
+  filename: (_, file, cb) => {
+    const rawExt = path.extname(file.originalname || '').toLowerCase();
+    const ext = ALLOWED_AUDIO_EXT.has(rawExt) ? rawExt : '.mp3';
+    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB max
+  fileFilter: (_, file, cb) => {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const mimeOk = ALLOWED_AUDIO_MIME.has((file.mimetype || '').toLowerCase());
+    const extOk = ALLOWED_AUDIO_EXT.has(ext);
+    cb(null, mimeOk && extOk);
+  },
+});
+
+app.use('/uploads', express.static(uploadsDir));
 
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: '*', methods: ['GET', 'POST'] },
+  cors: corsOptions,
 });
 
 // REST: stats
@@ -34,6 +90,64 @@ app.get('/api/room/:code', (req, res) => {
   if (!room) return res.status(404).json({ error: 'Room not found' });
   res.json({ code: room.code, participantCount: room.participants.length });
 });
+
+// REST: upload host audio file and return public URL
+app.post('/api/upload', upload.single('audio'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'Audio file is required' });
+  }
+
+  const origin = `${req.protocol}://${req.get('host')}`;
+  return res.json({
+    name: req.file.originalname || 'Uploaded Audio',
+    url: `${origin}/uploads/${req.file.filename}`,
+  });
+});
+
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({ error: err.message });
+  }
+  if (err) {
+    return res.status(400).json({ error: err.message || 'Upload failed' });
+  }
+  return next();
+});
+
+function normalizeCode(rawCode) {
+  if (typeof rawCode !== 'string') return null;
+  const code = rawCode.trim().toUpperCase();
+  return ROOM_CODE_REGEX.test(code) ? code : null;
+}
+
+function safeAck(callback, payload) {
+  if (typeof callback === 'function') callback(payload);
+}
+
+function getRoomAndMember(code, socketId) {
+  const room = getRoom(code);
+  if (!room) return { error: 'Room not found' };
+  const participant = room.participants.find((p) => p.id === socketId);
+  if (!participant) return { error: 'Not a room participant' };
+  return { room, participant };
+}
+
+function getHostRoom(code, socketId) {
+  const base = getRoomAndMember(code, socketId);
+  if (base.error) return base;
+  if (base.room.hostId !== socketId) return { error: 'Only host can perform this action' };
+  return base;
+}
+
+function sanitizeTrack(track) {
+  if (!track || typeof track !== 'object') return null;
+  const name = typeof track.name === 'string' ? track.name.trim() : '';
+  const artist = typeof track.artist === 'string' ? track.artist.trim() : 'Unknown Artist';
+  const url = typeof track.url === 'string' ? track.url.trim() : '';
+  if (!name || !url || url.length > 2048) return null;
+  if (!/^https?:\/\//i.test(url)) return null;
+  return { name: name.slice(0, 120), artist: artist.slice(0, 120), url };
+}
 
 io.on('connection', (socket) => {
   console.log(`[+] Connected: ${socket.id}`);
@@ -49,18 +163,24 @@ io.on('connection', (socket) => {
 
   // Create room
   socket.on('room:create', ({ userName }, callback) => {
-    const room = createRoom(socket.id, userName || 'Host');
+    const safeName = typeof userName === 'string' && userName.trim() ? userName.trim().slice(0, 60) : 'Host';
+    const room = createRoom(socket.id, safeName);
     socket.join(room.code);
     console.log(`[room] Created ${room.code} by ${socket.id}`);
-    callback({ success: true, room: sanitizeRoom(room) });
+    safeAck(callback, { success: true, room: sanitizeRoom(room) });
   });
 
   // Join room
   socket.on('room:join', ({ code, userName }, callback) => {
-    const upperCode = code.toUpperCase();
-    const room = joinRoom(upperCode, socket.id, userName || 'Listener');
+    const upperCode = normalizeCode(code);
+    if (!upperCode) {
+      safeAck(callback, { success: false, error: 'Invalid room code' });
+      return;
+    }
+    const safeName = typeof userName === 'string' && userName.trim() ? userName.trim().slice(0, 60) : 'Listener';
+    const room = joinRoom(upperCode, socket.id, safeName);
     if (!room) {
-      callback({ success: false, error: 'Room not found' });
+      safeAck(callback, { success: false, error: 'Room not found' });
       return;
     }
     socket.join(upperCode);
@@ -69,68 +189,126 @@ io.on('connection', (socket) => {
       participants: room.participants,
     });
     console.log(`[room] ${socket.id} joined ${upperCode}`);
-    callback({ success: true, room: sanitizeRoom(room) });
+    safeAck(callback, { success: true, room: sanitizeRoom(room) });
   });
 
   // Leave room
   socket.on('room:leave', ({ code }) => {
-    handleLeave(socket, code);
+    const upperCode = normalizeCode(code);
+    if (!upperCode) return;
+    handleLeave(socket, upperCode);
   });
 
   // Add track
   socket.on('track:add', ({ code, track }, callback) => {
-    const room = addTrackToRoom(code, { ...track, id: Date.now().toString(), addedBy: socket.id });
-    if (!room) { callback?.({ success: false }); return; }
-    io.to(code).emit('track:added', { playlist: room.playlist, currentTrack: room.currentTrack });
-    callback?.({ success: true });
+    const upperCode = normalizeCode(code);
+    if (!upperCode) {
+      safeAck(callback, { success: false, error: 'Invalid room code' });
+      return;
+    }
+    const hostRoom = getHostRoom(upperCode, socket.id);
+    if (hostRoom.error) {
+      safeAck(callback, { success: false, error: hostRoom.error });
+      return;
+    }
+    const safeTrack = sanitizeTrack(track);
+    if (!safeTrack) {
+      safeAck(callback, { success: false, error: 'Invalid track payload' });
+      return;
+    }
+    const room = addTrackToRoom(upperCode, { ...safeTrack, id: Date.now().toString(), addedBy: socket.id });
+    if (!room) {
+      safeAck(callback, { success: false, error: 'Room not found' });
+      return;
+    }
+    io.to(upperCode).emit('track:added', {
+      playlist: room.playlist,
+      currentTrack: room.currentTrack,
+      trackIndex: room.playbackState.trackIndex,
+    });
+    safeAck(callback, { success: true });
   });
 
   // Play/Pause sync
   socket.on('playback:play', ({ code, serverTime, currentTime, trackIndex }) => {
-    const room = updatePlayback(code, {
+    const upperCode = normalizeCode(code);
+    if (!upperCode) return;
+    const hostRoom = getHostRoom(upperCode, socket.id);
+    if (hostRoom.error) return;
+    const safeTrackIndex = Number.isInteger(trackIndex) ? trackIndex : hostRoom.room.playbackState.trackIndex;
+    const safeCurrentTime = Number.isFinite(currentTime) && currentTime >= 0 ? currentTime : 0;
+    const startedAt = Date.now();
+    const room = updatePlayback(upperCode, {
       isPlaying: true,
-      currentTime,
-      startedAt: serverTime || Date.now(),
-      trackIndex,
+      currentTime: safeCurrentTime,
+      startedAt,
+      trackIndex: safeTrackIndex,
     });
     if (!room) return;
-    io.to(code).emit('playback:sync', {
+    if (Number.isInteger(safeTrackIndex) && room.playlist[safeTrackIndex]) {
+      room.currentTrack = room.playlist[safeTrackIndex];
+    }
+    io.to(upperCode).emit('playback:sync', {
       isPlaying: true,
-      currentTime,
-      serverTime: serverTime || Date.now(),
-      trackIndex,
+      currentTime: safeCurrentTime,
+      serverTime: startedAt,
+      trackIndex: safeTrackIndex,
+      currentTrack: room.currentTrack || null,
     });
   });
 
   socket.on('playback:pause', ({ code, currentTime }) => {
-    const room = updatePlayback(code, { isPlaying: false, currentTime });
+    const upperCode = normalizeCode(code);
+    if (!upperCode) return;
+    const hostRoom = getHostRoom(upperCode, socket.id);
+    if (hostRoom.error) return;
+    const safeCurrentTime = Number.isFinite(currentTime) && currentTime >= 0 ? currentTime : hostRoom.room.playbackState.currentTime;
+    const room = updatePlayback(upperCode, { isPlaying: false, currentTime: safeCurrentTime });
     if (!room) return;
-    io.to(code).emit('playback:sync', { isPlaying: false, currentTime, serverTime: Date.now() });
+    io.to(upperCode).emit('playback:sync', {
+      isPlaying: false,
+      currentTime: safeCurrentTime,
+      serverTime: Date.now(),
+      trackIndex: room.playbackState.trackIndex,
+      currentTrack: room.currentTrack || null,
+    });
   });
 
   socket.on('playback:seek', ({ code, currentTime }) => {
-    const room = updatePlayback(code, { currentTime, startedAt: Date.now() });
+    const upperCode = normalizeCode(code);
+    if (!upperCode) return;
+    const hostRoom = getHostRoom(upperCode, socket.id);
+    if (hostRoom.error) return;
+    const safeCurrentTime = Number.isFinite(currentTime) && currentTime >= 0 ? currentTime : hostRoom.room.playbackState.currentTime;
+    const room = updatePlayback(upperCode, { currentTime: safeCurrentTime, startedAt: Date.now() });
     if (!room) return;
-    io.to(code).emit('playback:sync', {
+    io.to(upperCode).emit('playback:sync', {
       isPlaying: room.playbackState.isPlaying,
-      currentTime,
+      currentTime: safeCurrentTime,
       serverTime: Date.now(),
       trackIndex: room.playbackState.trackIndex,
+      currentTrack: room.currentTrack || null,
     });
   });
 
   socket.on('playback:next', ({ code }) => {
-    const room = getRoom(code);
+    const upperCode = normalizeCode(code);
+    if (!upperCode) return;
+    const hostRoom = getHostRoom(upperCode, socket.id);
+    if (hostRoom.error) return;
+    const room = hostRoom.room;
     if (!room) return;
+    if (!room.playlist.length) return;
     const nextIndex = Math.min(room.playbackState.trackIndex + 1, room.playlist.length - 1);
-    const updated = updatePlayback(code, {
+    const updated = updatePlayback(upperCode, {
       trackIndex: nextIndex,
       currentTime: 0,
       isPlaying: true,
       startedAt: Date.now(),
     });
     if (!updated) return;
-    io.to(code).emit('playback:track_changed', {
+    updated.currentTrack = updated.playlist[nextIndex] || null;
+    io.to(upperCode).emit('playback:track_changed', {
       trackIndex: nextIndex,
       currentTrack: updated.playlist[nextIndex] || null,
       serverTime: Date.now(),
@@ -138,17 +316,23 @@ io.on('connection', (socket) => {
   });
 
   socket.on('playback:prev', ({ code }) => {
-    const room = getRoom(code);
+    const upperCode = normalizeCode(code);
+    if (!upperCode) return;
+    const hostRoom = getHostRoom(upperCode, socket.id);
+    if (hostRoom.error) return;
+    const room = hostRoom.room;
     if (!room) return;
+    if (!room.playlist.length) return;
     const prevIndex = Math.max(room.playbackState.trackIndex - 1, 0);
-    const updated = updatePlayback(code, {
+    const updated = updatePlayback(upperCode, {
       trackIndex: prevIndex,
       currentTime: 0,
       isPlaying: true,
       startedAt: Date.now(),
     });
     if (!updated) return;
-    io.to(code).emit('playback:track_changed', {
+    updated.currentTrack = updated.playlist[prevIndex] || null;
+    io.to(upperCode).emit('playback:track_changed', {
       trackIndex: prevIndex,
       currentTrack: updated.playlist[prevIndex] || null,
       serverTime: Date.now(),
@@ -157,15 +341,41 @@ io.on('connection', (socket) => {
 
   // Chat
   socket.on('chat:send', ({ code, message, userName }) => {
-    const msg = { id: Date.now().toString(), userName, message, timestamp: Date.now() };
-    addChatMessage(code, msg);
-    io.to(code).emit('chat:message', msg);
+    const upperCode = normalizeCode(code);
+    if (!upperCode || typeof message !== 'string') return;
+    const roomMember = getRoomAndMember(upperCode, socket.id);
+    if (roomMember.error) return;
+    const trimmedMessage = message.trim();
+    if (!trimmedMessage) return;
+    const sender = typeof userName === 'string' && userName.trim()
+      ? userName.trim().slice(0, 60)
+      : roomMember.participant.name;
+    const msg = {
+      id: Date.now().toString(),
+      userId: socket.id,
+      userName: sender,
+      message: trimmedMessage.slice(0, MAX_CHAT_LENGTH),
+      timestamp: Date.now(),
+    };
+    addChatMessage(upperCode, msg);
+    io.to(upperCode).emit('chat:message', msg);
   });
 
   // Spatial audio
   socket.on('spatial:update', ({ code, position }) => {
-    updateSpatialPosition(code, socket.id, position);
-    socket.to(code).emit('spatial:positions', { userId: socket.id, position });
+    const upperCode = normalizeCode(code);
+    if (!upperCode || !position || typeof position !== 'object') return;
+    const roomMember = getRoomAndMember(upperCode, socket.id);
+    if (roomMember.error) return;
+    const x = Number(position.x);
+    const y = Number(position.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    const safePosition = {
+      x: Math.max(0, Math.min(1, x)),
+      y: Math.max(0, Math.min(1, y)),
+    };
+    updateSpatialPosition(upperCode, socket.id, safePosition);
+    socket.to(upperCode).emit('spatial:positions', { userId: socket.id, position: safePosition });
   });
 
   // Disconnect

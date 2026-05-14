@@ -2,25 +2,36 @@ import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Copy, Check, QrCode, Link } from 'lucide-react';
-import { useTheme } from '../context/ThemeContext';
+import { getRoomInviteUrl } from '../utils/siteUrl';
 
 export default function ShareModal({ roomCode, onClose }) {
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
-  const { isDark } = useTheme();
 
-  const roomUrl = `${window.location.origin}/room/${roomCode}`;
+  const roomUrl = getRoomInviteUrl(roomCode);
+
+  const copyText = async (text, onSuccess) => {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard API unavailable');
+      await navigator.clipboard.writeText(text);
+      onSuccess();
+    } catch {
+      window.prompt('Copy to clipboard:', text);
+    }
+  };
 
   const copyCode = () => {
-    navigator.clipboard.writeText(roomCode);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
+    copyText(roomCode, () => {
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2000);
+    });
   };
 
   const copyLink = () => {
-    navigator.clipboard.writeText(roomUrl);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
+    copyText(roomUrl, () => {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    });
   };
 
   return (
@@ -30,7 +41,7 @@ export default function ShareModal({ roomCode, onClose }) {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 z-50 backdrop-blur-md flex items-center justify-center p-4"
+        className="fixed inset-0 z-50 backdrop-blur-md flex items-center justify-center p-4 pt-[env(safe-area-inset-top,0px)] pb-[calc(1rem+env(safe-area-inset-bottom,0px))]"
         style={{ background: 'rgba(0,0,0,0.7)' }}
       >
         <motion.div
@@ -67,13 +78,7 @@ export default function ShareModal({ roomCode, onClose }) {
                 size={180}
                 bgColor="#ffffff"
                 fgColor="#050508"
-                level="M"
-                imageSettings={{
-                  src: '/favicon.svg',
-                  height: 28,
-                  width: 28,
-                  excavate: true,
-                }}
+                level="H"
               />
             </div>
 

@@ -10,6 +10,7 @@ export function useAudioSync(socket, roomCode, ntpOffset) {
   const progressRef = useRef(null);
   const ntpOffsetRef = useRef(ntpOffset);
   const volumeRef = useRef(0.8);
+  const scheduledPlayRef = useRef(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -62,6 +63,11 @@ export function useAudioSync(socket, roomCode, ntpOffset) {
       audioRef.current.crossOrigin = 'anonymous';
     }
     const audio = audioRef.current;
+    if (scheduledPlayRef.current) {
+      clearTimeout(scheduledPlayRef.current);
+      scheduledPlayRef.current = null;
+    }
+    audio.pause();
     audio.src = src;
     audio.volume = volumeRef.current;
     audio.onloadedmetadata = () => setDuration(audio.duration);
@@ -79,18 +85,30 @@ export function useAudioSync(socket, roomCode, ntpOffset) {
     if (serverTime) {
       const delay = (serverTime - (Date.now() + ntpOffsetRef.current)) / 1000;
       if (delay > 0) {
-        setTimeout(() => {
+        if (scheduledPlayRef.current) {
+          clearTimeout(scheduledPlayRef.current);
+        }
+        scheduledPlayRef.current = setTimeout(() => {
           audio.play().catch(() => {});
           setIsPlaying(true);
+          scheduledPlayRef.current = null;
         }, delay * 1000);
         return;
       }
+    }
+    if (scheduledPlayRef.current) {
+      clearTimeout(scheduledPlayRef.current);
+      scheduledPlayRef.current = null;
     }
     audio.play().catch(() => {});
     setIsPlaying(true);
   }, []);
 
   const pause = useCallback(() => {
+    if (scheduledPlayRef.current) {
+      clearTimeout(scheduledPlayRef.current);
+      scheduledPlayRef.current = null;
+    }
     audioRef.current?.pause();
     setIsPlaying(false);
   }, []);
@@ -147,6 +165,9 @@ export function useAudioSync(socket, roomCode, ntpOffset) {
   useEffect(() => {
     return () => {
       cancelAnimationFrame(animFrameRef.current);
+      if (scheduledPlayRef.current) {
+        clearTimeout(scheduledPlayRef.current);
+      }
       audioRef.current?.pause();
     };
   }, []);

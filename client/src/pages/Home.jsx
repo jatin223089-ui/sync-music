@@ -9,6 +9,7 @@ import WaveformBg from '../components/WaveformBg';
 import Navbar from '../components/Navbar';
 import BrandLogo from '../components/BrandLogo';
 import { useRoom } from '../context/RoomContext';
+import { getBackendBaseUrl } from '../utils/siteUrl';
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 28 },
@@ -60,7 +61,7 @@ export default function Home() {
   const [stats, setStats] = useState({ activeRooms: 0, totalListeners: 0 });
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/stats')
+    fetch(`${getBackendBaseUrl()}/api/stats`)
       .then((r) => r.json())
       .then(setStats)
       .catch(() => {});
@@ -82,11 +83,11 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] overflow-x-hidden">
+    <div className="min-h-[100dvh] bg-[var(--bg)] overflow-x-hidden">
       <Navbar />
 
       {/* ═══════════════════ HERO ═══════════════════ */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center px-5 pt-20 pb-12 overflow-hidden">
+      <section className="relative min-h-[100dvh] flex flex-col items-center justify-center px-5 pt-[calc(5rem+env(safe-area-inset-top,0px))] pb-[calc(3rem+env(safe-area-inset-bottom,0px))] overflow-hidden">
 
         {/* Ambient orbs */}
         <div className="orb orb-purple w-[700px] h-[700px] top-[-200px] left-[-200px] animate-orb-1 opacity-80" />
@@ -133,7 +134,7 @@ export default function Home() {
           {/* Join / Create card */}
           <motion.div
             {...fadeUp(0.30)}
-            className="glass-lighter rounded-3xl p-6 sm:p-8 card-glow max-w-lg mx-auto text-left space-y-4"
+            className="glass-lighter rounded-3xl p-6 sm:p-8 card-glow max-w-lg mx-auto text-left space-y-4 pb-[max(1.5rem,calc(1rem+env(safe-area-inset-bottom,0px)))]"
           >
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--faint)' }}>
@@ -151,9 +152,9 @@ export default function Home() {
               <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--faint)' }}>
                 Room code
               </label>
-              <div className="flex gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
                 <input
-                  className="flex-1 bg-[var(--bg-2)] border border-[var(--border)] focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)]/20 rounded-xl px-4 py-3 text-[var(--text)] placeholder-[var(--faint)] text-sm uppercase tracking-[0.25em] font-mono transition-all outline-none"
+                  className="min-w-0 flex-1 bg-[var(--bg-2)] border border-[var(--border)] focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)]/20 rounded-xl px-4 py-3 text-[var(--text)] placeholder-[var(--faint)] text-sm uppercase tracking-[0.25em] font-mono transition-all outline-none"
                   placeholder="ABC123"
                   value={code}
                   maxLength={6}
@@ -162,7 +163,7 @@ export default function Home() {
                 />
                 <button
                   onClick={handleJoin}
-                  className="btn-primary px-5 py-3 rounded-xl font-semibold text-sm flex items-center gap-2 whitespace-nowrap"
+                  className="btn-primary w-full sm:w-auto justify-center px-5 py-3 rounded-xl font-semibold text-sm flex items-center gap-2 whitespace-nowrap shrink-0"
                 >
                   Join <ArrowRight size={15} strokeWidth={2.5} />
                 </button>
@@ -186,7 +187,7 @@ export default function Home() {
 
             <button
               onClick={handleCreate}
-              className="group w-full py-3.5 rounded-xl border border-[var(--border-2)] hover:border-[var(--primary)]/40 bg-[var(--surface)]/40 hover:bg-[var(--primary)]/8 text-[var(--muted)] hover:text-[var(--text)] text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-200"
+              className="group w-full px-2 py-3.5 rounded-xl border border-[var(--border-2)] hover:border-[var(--primary)]/40 bg-[var(--surface)]/40 hover:bg-[var(--primary)]/8 text-[var(--muted)] hover:text-[var(--text)] text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-200"
             >
               <span className="w-5 h-5 rounded-lg flex items-center justify-center" style={{ background: 'color-mix(in srgb, var(--primary) 20%, transparent)', color: 'var(--primary)' }}>+</span>
               Create New Room
@@ -195,12 +196,12 @@ export default function Home() {
           </motion.div>
 
           {/* Live stats pills */}
-          <motion.div {...fadeUp(0.42)} className="mt-8 flex items-center justify-center gap-3 flex-wrap">
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/8 border border-emerald-500/20 text-sm">
+          <motion.div {...fadeUp(0.42)} className="mt-8 grid grid-cols-2 grid-rows-6 gap-x-[18px] gap-y-0 px-[14px]">
+            <div className="flex items-center justify-center gap-2 px-2 py-2 rounded-full bg-emerald-500/8 border border-emerald-500/20 text-sm text-right">
               <Radio size={13} className="text-emerald-400" />
               <span className="text-[var(--muted)]"><strong className="text-emerald-400 font-semibold">{stats.activeRooms}</strong> rooms live</span>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full text-sm" style={{ background: 'color-mix(in srgb, var(--primary) 8%, transparent)', borderColor: 'color-mix(in srgb, var(--primary) 20%, transparent)', borderWidth: '1px', borderStyle: 'solid' }}>
+            <div className="flex items-center justify-center gap-2 px-2 py-2 rounded-full text-sm text-right" style={{ background: 'color-mix(in srgb, var(--primary) 8%, transparent)', borderColor: 'color-mix(in srgb, var(--primary) 20%, transparent)', borderWidth: '1px', borderStyle: 'solid' }}>
               <Users size={13} style={{ color: 'var(--primary)' }} />
               <span className="text-[var(--muted)]"><strong style={{ color: 'var(--primary)' }} className="font-semibold">{stats.totalListeners}</strong> listening now</span>
             </div>
@@ -209,10 +210,10 @@ export default function Home() {
 
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.8 }}
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
+          className="hidden sm:flex absolute bottom-10 left-1/2 -translate-x-1/2 flex-row flex-wrap items-center justify-center gap-2 text-center pointer-events-none"
         >
           <div className="w-px h-10 bg-gradient-to-b from-transparent via-[var(--faint)] to-[var(--primary)]/40" />
-          <div className="w-1 h-1 rounded-full bg-[var(--primary)]/40" />
+          <div className="w-1 h-1 rounded-[13px] bg-[var(--primary)]/40 font-light text-[11px] text-center" />
         </motion.div>
       </section>
 

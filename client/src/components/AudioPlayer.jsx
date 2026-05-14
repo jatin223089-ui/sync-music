@@ -13,8 +13,6 @@ export default function AudioPlayer({
   volume, analyserData, onPlay, onPause, onSeek,
   onVolume, onNext, onPrev, isHost,
 }) {
-  const [shuffle, setShuffle] = useState(false);
-  const [repeat, setRepeat] = useState(false);
   const [muted, setMuted] = useState(false);
   const [prevVol, setPrevVol] = useState(0.8);
 
@@ -252,10 +250,10 @@ export default function AudioPlayer({
       {/* Controls */}
       <div className="flex items-center justify-center gap-6 w-full">
         <button
-          onClick={() => setShuffle(!shuffle)}
-          disabled={!isHost}
+          disabled
+          title="Shuffle is coming soon"
           className="transition-all disabled:opacity-30"
-          style={{ color: shuffle ? 'var(--primary)' : 'var(--faint)' }}
+          style={{ color: 'var(--faint)' }}
         >
           <Shuffle size={17} strokeWidth={2} />
         </button>
@@ -293,10 +291,10 @@ export default function AudioPlayer({
         </button>
 
         <button
-          onClick={() => setRepeat(!repeat)}
-          disabled={!isHost}
+          disabled
+          title="Repeat is coming soon"
           className="transition-all disabled:opacity-30"
-          style={{ color: repeat ? 'var(--primary)' : 'var(--faint)' }}
+          style={{ color: 'var(--faint)' }}
         >
           <Repeat size={17} strokeWidth={2} />
         </button>

@@ -1,4 +1,5 @@
 const rooms = new Map();
+const MAX_PLAYLIST_SIZE = 500;
 
 function generateRoomCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -74,6 +75,7 @@ function getRoom(code) {
 function addTrackToRoom(code, track) {
   const room = rooms.get(code);
   if (!room) return null;
+  if (room.playlist.length >= MAX_PLAYLIST_SIZE) return null;
   room.playlist.push(track);
   if (room.playbackState.trackIndex === -1) {
     room.playbackState.trackIndex = 0;

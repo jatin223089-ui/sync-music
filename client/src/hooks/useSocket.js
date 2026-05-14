@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
-
-const SOCKET_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
+import { getBackendBaseUrl } from '../utils/siteUrl';
 
 let sharedSocket = null;
 
@@ -11,7 +10,7 @@ export function useSocket() {
 
   useEffect(() => {
     if (!sharedSocket) {
-      sharedSocket = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
+      sharedSocket = io(getBackendBaseUrl(), { transports: ['websocket', 'polling'] });
     }
     socketRef.current = sharedSocket;
 

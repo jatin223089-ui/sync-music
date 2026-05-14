@@ -47,10 +47,10 @@ export default function Chat({ messages, onSend, myId }) {
           </div>
         ) : (
           messages.map((msg) => {
-            const isMe = msg.userId === myId || msg.userName === messages.find(m => m.userId === myId)?.userName;
+            const isMe = msg.userId === myId;
             const color = generateAvatarColor(msg.userName);
             return (
-              <div key={msg.id} className={`flex gap-2 ${isMe ? 'flex-row-reverse' : ''}`}>
+              <div key={msg.id || `${msg.userName}-${msg.timestamp}-${msg.message}`} className={`flex gap-2 ${isMe ? 'flex-row-reverse' : ''}`}>
                 <div
                   className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-white text-[9px] font-black"
                   style={{ background: color }}

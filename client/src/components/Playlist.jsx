@@ -1,27 +1,67 @@
 import { useState, useRef } from 'react';
 import { Music2, Plus, Play, Upload, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getBackendBaseUrl } from '../utils/siteUrl';
 
 export default function Playlist({ playlist, currentTrackIndex, isHost, onAddTrack, onSelectTrack }) {
   const [adding, setAdding] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState({ name: '', artist: '', url: '' });
   const [tab, setTab] = useState('url');
   const fileRef = useRef(null);
 
+  const isHttpUrl = (value) => {
+    try {
+      const parsed = new URL(value);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  };
+
   const handleAdd = () => {
-    if (!form.name.trim() || !form.url.trim()) return;
-    onAddTrack({ name: form.name.trim(), artist: form.artist.trim() || 'Unknown Artist', url: form.url.trim() });
+    const trimmedName = form.name.trim();
+    const trimmedUrl = form.url.trim();
+    if (!trimmedName || !trimmedUrl) return;
+    if (!isHttpUrl(trimmedUrl)) {
+      window.alert('Please enter a valid public audio URL starting with http:// or https://');
+      return;
+    }
+    onAddTrack({ name: trimmedName, artist: form.artist.trim() || 'Unknown Artist', url: trimmedUrl });
     setForm({ name: '', artist: '', url: '' });
     setAdding(false);
   };
 
-  const handleFile = (e) => {
+  const handleFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    const name = file.name.replace(/\.[^/.]+$/, '');
-    onAddTrack({ name, artist: 'Local File', url });
-    setAdding(false);
+    try {
+      setUploading(true);
+      const fd = new FormData();
+      fd.append('audio', file);
+      const response = await fetch(`${getBackendBaseUrl()}/api/upload`, {
+        method: 'POST',
+        body: fd,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+      if (!data?.url || !isHttpUrl(data.url)) {
+        throw new Error('Upload URL missing');
+      }
+      const name = file.name.replace(/\.[^/.]+$/, '');
+      onAddTrack({ name: data.name || name, artist: 'Uploaded File', url: data.url });
+      setAdding(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Upload failed. Please try again or use a public URL.';
+      window.alert(message);
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
   };
 
   return (
@@ -117,11 +157,12 @@ export default function Playlist({ playlist, currentTrackIndex, isHost, onAddTra
               ) : (
                 <button
                   onClick={() => fileRef.current?.click()}
+                  disabled={uploading}
                   className="w-full py-5 rounded-lg border-2 border-dashed flex flex-col items-center gap-2 transition-all"
                   style={{ borderColor: 'var(--border-2)', color: 'var(--muted)' }}
                 >
                   <Upload size={18} />
-                  <span className="text-xs font-medium">Click to upload audio</span>
+                  <span className="text-xs font-medium">{uploading ? 'Uploading...' : 'Click to upload audio'}</span>
                   <span className="text-[10px]" style={{ color: 'var(--faint)' }}>mp3, ogg, wav, m4a</span>
                 </button>
               )}
