@@ -1,0 +1,13 @@
+{
+  "name": "sync-music",
+  "version": "1.0.0",
+  "description": "sync.music — Synchronized music listening platform",
+  "scripts": {
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && npm run dev",
+    "install:all": "cd client && npm install && cd ../server && npm install"
+  },
+  "keywords": ["music", "sync", "realtime"],
+  "author": "",
+  "license": "MIT"
+}
