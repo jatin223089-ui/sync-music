@@ -19,9 +19,10 @@ export function getPublicSiteOrigin() {
 export function getRoomInviteUrl(roomCode) {
   const code = String(roomCode ?? '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
   const base = getPublicSiteOrigin().replace(/\/+$/, '');
-  if (!base || !code) return `${base}/join/`;
-  // Shorter /join/:code path — friendlier for phone QR parsers than encoded /room/ paths
-  return `${base}/join/${code}`;
+  if (!base || !code) return `${base}/`;
+  // `/?join=` always serves `/` (index.html) on static hosts — no SPA rewrite required for cold opens / QR.
+  // `/join/:code` and `/room/:code` still work after deploy thanks to client/vercel.json rewrites.
+  return `${base}/?join=${encodeURIComponent(code)}`;
 }
 
 /** REST / Socket base — upgrade http→https when the page is served over https (iOS Safari mixed-content). */

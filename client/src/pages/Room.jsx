@@ -483,7 +483,7 @@ export default function Room() {
           </div>
 
           {/* Mobile sidebar content */}
-          <div className="flex lg:hidden flex-1 overflow-hidden p-4">
+          <div className="flex lg:hidden flex-1 overflow-hidden min-h-0 px-3 py-3 sm:p-4">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}

@@ -65,8 +65,13 @@ export default function Home() {
     const j = searchParams.get('join') || searchParams.get('code');
     if (!j) return;
     const normalized = j.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
-    if (normalized.length === 6) setCode(normalized);
-  }, [searchParams]);
+    if (normalized.length !== 6) return;
+    setCode(normalized);
+    const saved = (userName || '').trim();
+    if (saved) {
+      navigate(`/room/${normalized}`, { replace: true });
+    }
+  }, [searchParams, userName, navigate]);
 
   useEffect(() => {
     fetch(`${getBackendBaseUrl()}/api/stats`)

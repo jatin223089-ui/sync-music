@@ -65,29 +65,58 @@ export default function Playlist({ playlist, currentTrackIndex, isHost, onAddTra
   };
 
   return (
-    <div className="flex flex-col h-full min-h-0">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wider flex items-center gap-2" style={{ color: 'var(--faint)' }}>
-          Queue
-          {playlist.length > 0 && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-md font-bold" style={{ background: 'var(--surface)', color: 'var(--muted)' }}>
-              {playlist.length}
-            </span>
+    <div className="flex flex-col h-full min-h-0 w-full min-w-0">
+      <div className="flex flex-col gap-2.5 mb-3 w-full min-w-0 pl-0.5 pr-1">
+        <div className="flex items-center justify-between gap-3 min-w-0">
+          <h3
+            className="text-xs font-semibold uppercase tracking-wider flex items-center gap-2 min-w-0 shrink"
+            style={{ color: 'var(--faint)' }}
+          >
+            <span className="truncate">Queue</span>
+            {playlist.length > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-md font-bold shrink-0" style={{ background: 'var(--surface)', color: 'var(--muted)' }}>
+                {playlist.length}
+              </span>
+            )}
+          </h3>
+          {isHost && (
+            <button
+              type="button"
+              aria-label={adding ? 'Close add track' : 'Add track to queue'}
+              onClick={() => setAdding(!adding)}
+              className="min-h-[44px] min-w-[44px] h-11 w-11 shrink-0 rounded-xl flex items-center justify-center transition-all active:scale-95"
+              style={{
+                background: adding ? 'var(--surface)' : 'linear-gradient(135deg, var(--primary), var(--primary-d))',
+                boxShadow: adding ? 'none' : '0 4px 12px color-mix(in srgb, var(--primary) 25%, transparent)',
+              }}
+            >
+              {adding
+                ? <X size={18} style={{ color: 'var(--muted)' }} />
+                : <Plus size={20} className="text-white" strokeWidth={2.5} />
+              }
+            </button>
           )}
-        </h3>
+        </div>
         {isHost && (
           <button
+            type="button"
             onClick={() => setAdding(!adding)}
-            className="w-7 h-7 rounded-lg flex items-center justify-center transition-all hover:scale-105"
+            className="lg:hidden w-full min-h-[48px] rounded-xl text-sm font-semibold flex items-center justify-center gap-2 border transition-colors"
             style={{
+              color: adding ? 'var(--muted)' : '#fff',
               background: adding ? 'var(--surface)' : 'linear-gradient(135deg, var(--primary), var(--primary-d))',
-              boxShadow: adding ? 'none' : '0 4px 12px color-mix(in srgb, var(--primary) 25%, transparent)',
+              borderColor: adding ? 'var(--border)' : 'transparent',
+              boxShadow: adding ? 'none' : '0 6px 20px color-mix(in srgb, var(--primary) 22%, transparent)',
             }}
           >
-            {adding
-              ? <X size={13} style={{ color: 'var(--muted)' }} />
-              : <Plus size={14} className="text-white" strokeWidth={2.5} />
-            }
+            {adding ? (
+              <>Close add track</>
+            ) : (
+              <>
+                <Plus size={18} strokeWidth={2.5} />
+                Add music to queue
+              </>
+            )}
           </button>
         )}
       </div>
