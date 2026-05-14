@@ -1,14 +1,27 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Music2, Plus, Play, Upload, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getBackendBaseUrl } from '../utils/siteUrl';
 
-export default function Playlist({ playlist, currentTrackIndex, isHost, onAddTrack, onSelectTrack }) {
+export default function Playlist({ playlist, currentTrackIndex, isHost, onAddTrack, onSelectTrack, addFormNonce = 0 }) {
   const [adding, setAdding] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState({ name: '', artist: '', url: '' });
   const [tab, setTab] = useState('url');
   const fileRef = useRef(null);
+  const lastAddNonce = useRef(null);
+
+  useEffect(() => {
+    if (!isHost) return;
+    if (lastAddNonce.current === null) {
+      lastAddNonce.current = addFormNonce;
+      return;
+    }
+    if (addFormNonce > lastAddNonce.current) {
+      setAdding(true);
+    }
+    lastAddNonce.current = addFormNonce;
+  }, [addFormNonce, isHost]);
 
   const isHttpUrl = (value) => {
     try {
@@ -67,9 +80,9 @@ export default function Playlist({ playlist, currentTrackIndex, isHost, onAddTra
   return (
     <div className="flex flex-col h-full min-h-0 w-full min-w-0">
       <div className="flex flex-col gap-2.5 mb-3 w-full min-w-0 pl-0.5 pr-1">
-        <div className="flex items-center justify-between gap-3 min-w-0">
+        <div className="flex items-center justify-between gap-2 min-w-0 w-full">
           <h3
-            className="text-xs font-semibold uppercase tracking-wider flex items-center gap-2 min-w-0 shrink"
+            className="text-xs font-semibold uppercase tracking-wider flex items-center gap-2 min-w-0 flex-1"
             style={{ color: 'var(--faint)' }}
           >
             <span className="truncate">Queue</span>
@@ -84,15 +97,15 @@ export default function Playlist({ playlist, currentTrackIndex, isHost, onAddTra
               type="button"
               aria-label={adding ? 'Close add track' : 'Add track to queue'}
               onClick={() => setAdding(!adding)}
-              className="min-h-[44px] min-w-[44px] h-11 w-11 shrink-0 rounded-xl flex items-center justify-center transition-all active:scale-95"
+              className="hidden lg:flex min-h-[40px] min-w-[40px] h-10 w-10 shrink-0 rounded-xl items-center justify-center transition-all active:scale-95"
               style={{
                 background: adding ? 'var(--surface)' : 'linear-gradient(135deg, var(--primary), var(--primary-d))',
                 boxShadow: adding ? 'none' : '0 4px 12px color-mix(in srgb, var(--primary) 25%, transparent)',
               }}
             >
               {adding
-                ? <X size={18} style={{ color: 'var(--muted)' }} />
-                : <Plus size={20} className="text-white" strokeWidth={2.5} />
+                ? <X size={16} style={{ color: 'var(--muted)' }} />
+                : <Plus size={18} className="text-white" strokeWidth={2.5} />
               }
             </button>
           )}

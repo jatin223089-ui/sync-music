@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   Play, Pause, SkipBack, SkipForward,
   Shuffle, Repeat, Volume2, VolumeX, Music2,
-  Lock, Sparkles, Disc3,
+  Lock, Sparkles, Disc3, Plus,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatTime } from '../utils/formatTime';
@@ -13,6 +13,7 @@ export default function AudioPlayer({
   volume, analyserData, onPlay, onPause, onSeek,
   onVolume, onNext, onPrev, isHost,
   needsTapToPlay, onTapToPlay,
+  onOpenAddTracks,
 }) {
   const [muted, setMuted] = useState(false);
   const [prevVol, setPrevVol] = useState(0.8);
@@ -28,7 +29,7 @@ export default function AudioPlayer({
   /* ─────────── EMPTY STATE ─────────── */
   if (!currentTrack) {
     return (
-      <div className="flex flex-col items-center gap-8 w-full max-w-sm mx-auto py-8">
+      <div className="flex flex-col items-center gap-6 w-full max-w-full min-w-0 mx-auto px-3 py-6 sm:py-8">
         {/* Decorative empty disc */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
@@ -102,8 +103,18 @@ export default function AudioPlayer({
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="w-full"
+            className="w-full max-w-sm min-w-0 space-y-3"
           >
+            {onOpenAddTracks && (
+              <button
+                type="button"
+                onClick={onOpenAddTracks}
+                className="w-full min-h-[52px] rounded-xl text-sm font-bold btn-primary flex items-center justify-center gap-2 shadow-lg"
+              >
+                <Plus size={20} strokeWidth={2.5} />
+                Add tracks to queue
+              </button>
+            )}
             <div className="rounded-2xl border p-4 flex items-center gap-3"
               style={{
                 background: 'color-mix(in srgb, var(--primary) 6%, transparent)',
@@ -120,7 +131,9 @@ export default function AudioPlayer({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-semibold text-[var(--text)]">You're the host</p>
-                <p className="text-[11px] text-[var(--muted)] mt-0.5">Tap the + in the Queue to add tracks</p>
+                <p className="text-[11px] text-[var(--muted)] mt-0.5 leading-snug">
+                  Use the button above or open the Queue tab to add music.
+                </p>
               </div>
             </div>
           </motion.div>
@@ -141,7 +154,7 @@ export default function AudioPlayer({
 
   /* ─────────── ACTIVE PLAYER ─────────── */
   return (
-    <div className="flex flex-col items-center gap-6 w-full max-w-sm mx-auto">
+    <div className="flex flex-col items-center gap-6 w-full max-w-sm min-w-0 mx-auto px-2">
 
       {/* Vinyl / album art */}
       <div className="relative w-full flex items-center justify-center pt-2 pb-4">

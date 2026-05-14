@@ -38,8 +38,14 @@ export default function Room() {
   const [joining, setJoining] = useState(true);
   const [joinError, setJoinError] = useState('');
   const [showShare, setShowShare] = useState(false);
+  const [addFormNonce, setAddFormNonce] = useState(0);
   const ntpRef = useRef(null);
   const joinSessionRef = useRef('');
+
+  const openQueueAndAddTrack = useCallback(() => {
+    setActiveTab('queue');
+    setAddFormNonce((n) => n + 1);
+  }, []);
 
   const {
     isPlaying, currentTime, duration, volume, analyserData, playBlocked,
@@ -342,7 +348,7 @@ export default function Room() {
 
   /* ── Main render ────────────────────────────────── */
   return (
-    <div className="min-h-[100dvh] max-h-[100dvh] lg:min-h-screen lg:max-h-none bg-[var(--bg)] flex flex-col relative overflow-hidden">
+    <div className="min-h-[100dvh] max-h-[100dvh] lg:min-h-screen lg:max-h-none bg-[var(--bg)] flex flex-col relative overflow-hidden overflow-x-hidden max-w-[100vw]">
 
       {/* Ambient background orbs */}
       <div className="orb orb-purple w-[700px] h-[700px] top-[-200px] left-[-150px] animate-orb-1 opacity-40 pointer-events-none" />
@@ -360,7 +366,7 @@ export default function Room() {
         }}
       >
         {/* Left cluster */}
-        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 flex-1 overflow-hidden">
           {/* Logo mark */}
           <BrandLogo size={28} className="flex-shrink-0" />
 
@@ -435,12 +441,12 @@ export default function Room() {
 
         {/* ── LEFT SIDEBAR ── */}
         <aside
-          className="lg:w-[300px] xl:w-[340px] flex flex-col border-r flex-1 min-h-0 basis-0 lg:flex-none lg:basis-auto lg:flex-shrink-0"
+          className="lg:w-[300px] xl:w-[340px] flex flex-col border-r flex-1 min-h-0 min-w-0 basis-0 max-w-full overflow-x-hidden lg:flex-none lg:basis-auto lg:flex-shrink-0"
           style={{ borderColor: 'color-mix(in srgb, var(--border) 60%, transparent)', background: 'color-mix(in srgb, var(--bg) 80%, transparent)' }}
         >
           {/* Mobile tab bar */}
           <div
-            className="flex lg:hidden border-b"
+            className="flex lg:hidden border-b min-w-0 w-full overflow-x-hidden"
             style={{ borderColor: 'color-mix(in srgb, var(--border) 60%, transparent)', background: 'color-mix(in srgb, var(--surface) 40%, transparent)' }}
           >
             {TABS.map((tab) => {
@@ -448,16 +454,18 @@ export default function Room() {
               return (
                 <button
                   key={tab.id}
+                  type="button"
+                  aria-label={tab.label}
                   onClick={() => setActiveTab(tab.id)}
-                  className="relative flex-1 py-3 flex flex-col items-center gap-1 text-[10px] font-semibold transition-all"
+                  className="relative flex-1 min-w-0 max-w-[25%] py-2 px-0.5 flex flex-col items-center gap-0.5 text-[8px] sm:text-[10px] font-semibold transition-all leading-tight"
                   style={{ color: active ? 'var(--primary)' : 'var(--faint)' }}
                 >
-                  <tab.icon size={15} strokeWidth={1.8} />
-                  {tab.label}
+                  <tab.icon size={14} strokeWidth={1.8} className="shrink-0" />
+                  <span className="w-full text-center truncate px-0.5">{tab.label}</span>
                   {active && (
                     <motion.div
                       layoutId="tab-indicator"
-                      className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full"
+                      className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 sm:w-8 h-0.5 rounded-full max-w-[80%]"
                       style={{ background: 'var(--primary)' }}
                     />
                   )}
@@ -478,20 +486,21 @@ export default function Room() {
                 isHost={isHost}
                 onAddTrack={handleAddTrack}
                 onSelectTrack={handleSelectTrack}
+                addFormNonce={addFormNonce}
               />
             </div>
           </div>
 
           {/* Mobile sidebar content */}
-          <div className="flex lg:hidden flex-1 overflow-hidden min-h-0 px-3 py-3 sm:p-4">
+          <div className="flex lg:hidden flex-1 overflow-hidden overflow-x-hidden min-h-0 min-w-0 w-full max-w-full px-2 py-2 sm:px-3 sm:py-3">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
-                initial={{ opacity: 0, x: 8 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -8 }}
-                transition={{ duration: 0.18 }}
-                className="w-full h-full flex flex-col min-h-0"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.15 }}
+                className="w-full h-full flex flex-col min-h-0 min-w-0 max-w-full"
               >
                 {activeTab === 'queue' && (
                   <Playlist
@@ -500,6 +509,7 @@ export default function Room() {
                     isHost={isHost}
                     onAddTrack={handleAddTrack}
                     onSelectTrack={handleSelectTrack}
+                    addFormNonce={addFormNonce}
                   />
                 )}
                 {activeTab === 'people'  && <ParticipantList participants={room?.participants || []} myId={myId} />}
@@ -552,7 +562,7 @@ export default function Room() {
           </div>
 
           {/* Player area */}
-          <div className="flex-1 px-4 py-6 sm:px-6 sm:py-8 flex flex-col justify-center items-center min-h-0 overflow-y-auto pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:pb-8">
+          <div className="flex-1 px-3 py-5 sm:px-6 sm:py-8 flex flex-col justify-center items-center min-h-0 min-w-0 max-w-full overflow-x-hidden overflow-y-auto pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:pb-8">
             <AudioPlayer
               currentTrack={currentTrack}
               isPlaying={isPlaying}
@@ -569,6 +579,7 @@ export default function Room() {
               isHost={isHost}
               needsTapToPlay={playBlocked}
               onTapToPlay={unlockRemotePlayback}
+              onOpenAddTracks={isHost ? openQueueAndAddTrack : undefined}
             />
           </div>
 
