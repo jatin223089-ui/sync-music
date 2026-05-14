@@ -149,6 +149,28 @@ function sanitizeTrack(track) {
   return { name: name.slice(0, 120), artist: artist.slice(0, 120), url };
 }
 
+/** Full playback snapshot for clients (listeners + host UI). */
+function playbackSyncPayload(room) {
+  const ps = room.playbackState || {};
+  const currentTime = Number.isFinite(ps.currentTime) ? ps.currentTime : 0;
+  const isPlaying = !!ps.isPlaying;
+  const startedAt = isPlaying && ps.startedAt != null ? ps.startedAt : null;
+  const wall = Date.now();
+  const serverTime = startedAt != null ? startedAt : wall;
+  return {
+    isPlaying,
+    currentTime,
+    serverTime,
+    startedAt,
+    trackIndex: ps.trackIndex,
+    currentTrack: room.currentTrack || null,
+  };
+}
+
+function emitPlaybackSync(io, roomCode, room) {
+  io.to(roomCode).emit('playback:sync', playbackSyncPayload(room));
+}
+
 io.on('connection', (socket) => {
   console.log(`[+] Connected: ${socket.id}`);
 
@@ -190,6 +212,8 @@ io.on('connection', (socket) => {
     });
     console.log(`[room] ${socket.id} joined ${upperCode}`);
     safeAck(callback, { success: true, room: sanitizeRoom(room) });
+    // Personal sync so this client aligns audio immediately (listeners joining mid-session).
+    socket.emit('playback:sync', playbackSyncPayload(room));
   });
 
   // Leave room
@@ -248,13 +272,7 @@ io.on('connection', (socket) => {
     if (Number.isInteger(safeTrackIndex) && room.playlist[safeTrackIndex]) {
       room.currentTrack = room.playlist[safeTrackIndex];
     }
-    io.to(upperCode).emit('playback:sync', {
-      isPlaying: true,
-      currentTime: safeCurrentTime,
-      serverTime: startedAt,
-      trackIndex: safeTrackIndex,
-      currentTrack: room.currentTrack || null,
-    });
+    emitPlaybackSync(io, upperCode, room);
   });
 
   socket.on('playback:pause', ({ code, currentTime }) => {
@@ -263,15 +281,9 @@ io.on('connection', (socket) => {
     const hostRoom = getHostRoom(upperCode, socket.id);
     if (hostRoom.error) return;
     const safeCurrentTime = Number.isFinite(currentTime) && currentTime >= 0 ? currentTime : hostRoom.room.playbackState.currentTime;
-    const room = updatePlayback(upperCode, { isPlaying: false, currentTime: safeCurrentTime });
+    const room = updatePlayback(upperCode, { isPlaying: false, currentTime: safeCurrentTime, startedAt: null });
     if (!room) return;
-    io.to(upperCode).emit('playback:sync', {
-      isPlaying: false,
-      currentTime: safeCurrentTime,
-      serverTime: Date.now(),
-      trackIndex: room.playbackState.trackIndex,
-      currentTrack: room.currentTrack || null,
-    });
+    emitPlaybackSync(io, upperCode, room);
   });
 
   socket.on('playback:seek', ({ code, currentTime }) => {
@@ -282,13 +294,7 @@ io.on('connection', (socket) => {
     const safeCurrentTime = Number.isFinite(currentTime) && currentTime >= 0 ? currentTime : hostRoom.room.playbackState.currentTime;
     const room = updatePlayback(upperCode, { currentTime: safeCurrentTime, startedAt: Date.now() });
     if (!room) return;
-    io.to(upperCode).emit('playback:sync', {
-      isPlaying: room.playbackState.isPlaying,
-      currentTime: safeCurrentTime,
-      serverTime: Date.now(),
-      trackIndex: room.playbackState.trackIndex,
-      currentTrack: room.currentTrack || null,
-    });
+    emitPlaybackSync(io, upperCode, room);
   });
 
   socket.on('playback:next', ({ code }) => {
@@ -313,6 +319,8 @@ io.on('connection', (socket) => {
       currentTrack: updated.playlist[nextIndex] || null,
       serverTime: Date.now(),
     });
+    // Defer full sync so clients can apply new track URL before play/seek (avoids race with loadAudio).
+    setImmediate(() => emitPlaybackSync(io, upperCode, updated));
   });
 
   socket.on('playback:prev', ({ code }) => {
@@ -337,6 +345,7 @@ io.on('connection', (socket) => {
       currentTrack: updated.playlist[prevIndex] || null,
       serverTime: Date.now(),
     });
+    setImmediate(() => emitPlaybackSync(io, upperCode, updated));
   });
 
   // Chat

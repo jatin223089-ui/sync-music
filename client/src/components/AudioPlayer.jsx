@@ -12,6 +12,7 @@ export default function AudioPlayer({
   currentTrack, isPlaying, currentTime, duration,
   volume, analyserData, onPlay, onPause, onSeek,
   onVolume, onNext, onPrev, isHost,
+  needsTapToPlay, onTapToPlay,
 }) {
   const [muted, setMuted] = useState(false);
   const [prevVol, setPrevVol] = useState(0.8);
@@ -222,6 +223,16 @@ export default function AudioPlayer({
       <div className="w-full px-2">
         <WaveformVisualizer data={analyserData} isPlaying={isPlaying} />
       </div>
+
+      {needsTapToPlay && (
+        <button
+          type="button"
+          onClick={onTapToPlay}
+          className="w-full max-w-sm mx-auto rounded-xl px-4 py-3 text-sm font-semibold btn-primary"
+        >
+          Tap to enable audio (iOS / browser)
+        </button>
+      )}
 
       {/* Progress */}
       <div className="w-full flex items-center gap-3 px-1">

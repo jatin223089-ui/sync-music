@@ -42,8 +42,8 @@ export default function Room() {
   const joinSessionRef = useRef('');
 
   const {
-    isPlaying, currentTime, duration, volume, analyserData,
-    loadAudio, play, pause, seek, setVolume,
+    isPlaying, currentTime, duration, volume, analyserData, playBlocked,
+    loadAudio, play, pause, seek, setVolume, unlockRemotePlayback,
   } = useAudioSync(socket, room?.code, ntpOffset);
 
   const myId = socket?.id;
@@ -153,18 +153,44 @@ export default function Room() {
       });
     };
 
-    const handleTrackChanged = ({ trackIndex, currentTrack }) => {
-      setRoom((r) => r ? { ...r, playbackState: { ...r.playbackState, trackIndex, isPlaying: true }, currentTrack } : r);
+    const handleTrackChanged = ({ trackIndex, currentTrack, serverTime }) => {
+      setRoom((r) => {
+        if (!r) return r;
+        return {
+          ...r,
+          playbackState: {
+            ...r.playbackState,
+            trackIndex,
+            isPlaying: true,
+            currentTime: 0,
+            startedAt: serverTime != null ? serverTime : Date.now(),
+          },
+          currentTrack,
+        };
+      });
     };
 
-    const handlePlaybackSync = ({ trackIndex, currentTrack: syncedTrack }) => {
+    const handlePlaybackSync = ({
+      trackIndex,
+      currentTrack: syncedTrack,
+      isPlaying,
+      currentTime,
+      startedAt,
+      serverTime,
+    }) => {
       setRoom((r) => {
         if (!r) return r;
         const nextIndex = Number.isInteger(trackIndex) ? trackIndex : r.playbackState?.trackIndex;
+        const nextPs = { ...r.playbackState, trackIndex: nextIndex };
+        if (typeof isPlaying === 'boolean') nextPs.isPlaying = isPlaying;
+        if (Number.isFinite(currentTime)) nextPs.currentTime = currentTime;
+        if (typeof isPlaying === 'boolean' && !isPlaying) nextPs.startedAt = null;
+        else if (startedAt != null && Number.isFinite(startedAt)) nextPs.startedAt = startedAt;
+        else if (typeof isPlaying === 'boolean' && isPlaying && serverTime != null) nextPs.startedAt = serverTime;
         return {
           ...r,
-          currentTrack: syncedTrack || r.currentTrack,
-          playbackState: { ...r.playbackState, trackIndex: nextIndex },
+          currentTrack: syncedTrack != null ? syncedTrack : r.currentTrack,
+          playbackState: nextPs,
         };
       });
     };
@@ -541,6 +567,8 @@ export default function Room() {
               onNext={handleNext}
               onPrev={handlePrev}
               isHost={isHost}
+              needsTapToPlay={playBlocked}
+              onTapToPlay={unlockRemotePlayback}
             />
           </div>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Zap, Headphones, Globe, ArrowRight,
@@ -54,11 +54,19 @@ const ticker = [
 
 export default function Home() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { setUserName, userName } = useRoom();
   const [code, setCode] = useState('');
   const [name, setName] = useState(userName || '');
   const [error, setError] = useState('');
   const [stats, setStats] = useState({ activeRooms: 0, totalListeners: 0 });
+
+  useEffect(() => {
+    const j = searchParams.get('join') || searchParams.get('code');
+    if (!j) return;
+    const normalized = j.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+    if (normalized.length === 6) setCode(normalized);
+  }, [searchParams]);
 
   useEffect(() => {
     fetch(`${getBackendBaseUrl()}/api/stats`)
@@ -102,31 +110,31 @@ export default function Home() {
           style={{ background: 'radial-gradient(ellipse 70% 60% at 50% 55%, transparent 20%, var(--bg) 75%)' }}
         />
 
-        <div className="relative z-10 max-w-3xl mx-auto text-center">
+        <div className="relative z-10 w-full max-w-[min(100%,42rem)] mx-auto text-center min-w-0 px-0">
 
           {/* Built with love badge */}
-          <motion.div {...fadeUp(0)} className="flex justify-center mb-6">
-            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--surface)]/70 border border-[var(--border)] text-xs font-medium text-[var(--muted)] backdrop-blur-md">
+          <motion.div {...fadeUp(0)} className="flex justify-center mb-6 px-1">
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--surface)]/70 border border-[var(--border)] text-xs font-medium text-[var(--muted)] backdrop-blur-md max-w-full text-center">
               Built with <Heart size={11} className="text-red-400 fill-red-400 animate-heartbeat" /> for music lovers
             </span>
           </motion.div>
 
           {/* Badge */}
-          <motion.div {...fadeUp(0.05)} className="inline-flex items-center gap-2.5 mb-8">
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--primary)]/10 border border-[var(--primary)]/25 text-xs font-medium" style={{ color: 'var(--primary)' }}>
+          <motion.div {...fadeUp(0.05)} className="flex flex-wrap justify-center gap-2 mb-8 px-1">
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--primary)]/10 border border-[var(--primary)]/25 text-xs font-medium max-w-full" style={{ color: 'var(--primary)' }}>
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] animate-pulse" />
               Open source · Real-time sync
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] animate-pulse" />
             </span>
           </motion.div>
 
-          <motion.h1 {...fadeUp(0.12)} className="text-[clamp(2.8rem,8vw,5.5rem)] font-black leading-[1.05] tracking-[-0.03em] mb-6 text-[var(--text)]">
+          <motion.h1 {...fadeUp(0.12)} className="text-[clamp(2rem,9.5vw,5.5rem)] font-black leading-[1.05] tracking-[-0.03em] mb-6 text-[var(--text)] px-1 text-balance max-w-full">
             Listen Together,
             <br />
             <span className="gradient-text">In Perfect Sync.</span>
           </motion.h1>
 
-          <motion.p {...fadeUp(0.22)} className="text-lg sm:text-xl text-[var(--muted)] leading-relaxed mb-12 max-w-xl mx-auto">
+          <motion.p {...fadeUp(0.22)} className="text-base sm:text-lg md:text-xl text-[var(--muted)] leading-relaxed mb-12 max-w-xl mx-auto px-1 text-balance hyphens-none [overflow-wrap:anywhere]">
             Synchronized music across every device — millisecond-accurate,
             no download required, completely free.
           </motion.p>
@@ -134,7 +142,7 @@ export default function Home() {
           {/* Join / Create card */}
           <motion.div
             {...fadeUp(0.30)}
-            className="glass-lighter rounded-3xl p-6 sm:p-8 card-glow max-w-lg mx-auto text-left space-y-4 pb-[max(1.5rem,calc(1rem+env(safe-area-inset-bottom,0px)))]"
+            className="glass-lighter rounded-3xl p-6 sm:p-8 card-glow w-full max-w-lg min-w-0 mx-auto text-left space-y-4 pb-[max(1.5rem,calc(1rem+env(safe-area-inset-bottom,0px)))]"
           >
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--faint)' }}>
@@ -196,7 +204,7 @@ export default function Home() {
           </motion.div>
 
           {/* Live stats pills */}
-          <motion.div {...fadeUp(0.42)} className="mt-8 grid grid-cols-2 grid-rows-6 gap-x-[18px] gap-y-0 px-[14px]">
+          <motion.div {...fadeUp(0.42)} className="mt-8 grid grid-cols-2 gap-x-3 gap-y-2 sm:gap-x-[18px] px-1 sm:px-[14px] max-w-lg mx-auto w-full">
             <div className="flex items-center justify-center gap-2 px-2 py-2 rounded-full bg-emerald-500/8 border border-emerald-500/20 text-sm text-right">
               <Radio size={13} className="text-emerald-400" />
               <span className="text-[var(--muted)]"><strong className="text-emerald-400 font-semibold">{stats.activeRooms}</strong> rooms live</span>
