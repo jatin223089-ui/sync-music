@@ -19,7 +19,6 @@ export default function SpatialMap({ participants, spatialPositions, myId, onPos
 
     const primary  = readCSSVar('--primary')   || '#9D6FFF';
     const second   = readCSSVar('--secondary') || '#22D3EE';
-    const muted    = readCSSVar('--muted')     || '#8892A4';
     const border   = readCSSVar('--border')    || '#1E1E32';
     const faint    = readCSSVar('--faint')     || '#3D4460';
 
