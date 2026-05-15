@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import Room from './pages/Room';
 import JoinRoom from './pages/JoinRoom';
 import About from './pages/About';
+import InstallPrompt from './components/InstallPrompt';
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
             <Route path="/room/:code" element={<Room />} />
             <Route path="/about" element={<About />} />
           </Routes>
+          <InstallPrompt />
         </BrowserRouter>
       </RoomProvider>
     </ThemeProvider>
