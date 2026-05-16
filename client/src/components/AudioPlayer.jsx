@@ -2,357 +2,354 @@ import { useState } from 'react';
 import {
   Play, Pause, SkipBack, SkipForward,
   Shuffle, Repeat, Volume2, VolumeX, Music2,
-  Lock, Sparkles, Disc3, Plus,
+  Lock, Sparkles, Plus,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { formatTime } from '../utils/formatTime';
-import WaveformVisualizer from './WaveformVisualizer';
 
-export default function AudioPlayer({
-  currentTrack, isPlaying, currentTime, duration,
-  volume, analyserData, onPlay, onPause, onSeek,
-  onVolume, onNext, onPrev, isHost,
-  needsTapToPlay, onTapToPlay,
-  onOpenAddTracks,
+const SPOTIFY_GREEN = '#1DB954';
+
+function ProgressSegment({
+  currentTime, duration, progress, playbackControls, onSeek, variant = 'default',
 }) {
-  const [muted, setMuted] = useState(false);
-  const [prevVol, setPrevVol] = useState(0.8);
-
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
-  const volPct   = (muted ? 0 : volume) * 100;
-
-  const toggleMute = () => {
-    if (muted) { onVolume(prevVol); } else { setPrevVol(volume); onVolume(0); }
-    setMuted(!muted);
-  };
-
-  /* ─────────── EMPTY STATE ─────────── */
-  if (!currentTrack) {
-    return (
-      <div className="flex flex-col items-center gap-6 w-full max-w-full min-w-0 mx-auto px-3 py-6 sm:py-8">
-        {/* Decorative empty disc */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="relative"
-        >
-          {/* Outer pulsing ring */}
-          <div className="absolute inset-0 rounded-full animate-pulse-glow" style={{ background: 'radial-gradient(circle, color-mix(in srgb, var(--primary) 25%, transparent), transparent 70%)' }} />
-
-          {/* Disc */}
-          <div className="relative w-44 h-44 rounded-full flex items-center justify-center"
-            style={{
-              background: 'radial-gradient(circle at 35% 35%, color-mix(in srgb, var(--surface-2) 90%, var(--primary)), var(--surface) 70%)',
-              border: '1px solid var(--border)',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)',
-            }}
-          >
-            {/* Decorative rings */}
-            {[0.82, 0.66, 0.50, 0.32].map((r) => (
-              <div
-                key={r}
-                className="absolute rounded-full"
-                style={{
-                  width: `${r * 100}%`,
-                  height: `${r * 100}%`,
-                  border: '1px solid color-mix(in srgb, var(--border) 60%, transparent)',
-                }}
-              />
-            ))}
-
-            {/* Center icon */}
-            <div className="relative z-10 w-14 h-14 rounded-full flex items-center justify-center"
-              style={{
-                background: 'linear-gradient(135deg, color-mix(in srgb, var(--primary) 18%, transparent), color-mix(in srgb, var(--secondary) 12%, transparent))',
-                border: '1px solid color-mix(in srgb, var(--primary) 30%, transparent)',
-              }}
-            >
-              <Music2 size={20} style={{ color: 'var(--primary)' }} strokeWidth={1.5} />
-            </div>
-          </div>
-
-          {/* Floating sparkle */}
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
-            className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center"
-          >
-            <Sparkles size={14} style={{ color: 'var(--primary)' }} className="animate-glow-pulse" />
-          </motion.div>
-        </motion.div>
-
-        {/* CTA text */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="text-center space-y-2"
-        >
-          <h3 className="text-xl font-black tracking-tight text-[var(--text)]">Ready to play</h3>
-          <p className="text-sm text-[var(--muted)] leading-relaxed max-w-xs">
-            {isHost
-              ? 'Add a track to the queue to start the listening session.'
-              : 'Waiting for the host to add the first track…'}
-          </p>
-        </motion.div>
-
-        {/* Helper card */}
-        {isHost ? (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="w-full max-w-sm min-w-0 space-y-3"
-          >
-            {onOpenAddTracks && (
-              <button
-                type="button"
-                onClick={onOpenAddTracks}
-                className="w-full min-h-[52px] rounded-xl text-sm font-bold btn-primary flex items-center justify-center gap-2 shadow-lg"
-              >
-                <Plus size={20} strokeWidth={2.5} />
-                Add tracks to queue
-              </button>
-            )}
-            <div className="rounded-2xl border p-4 flex items-center gap-3"
-              style={{
-                background: 'color-mix(in srgb, var(--primary) 6%, transparent)',
-                borderColor: 'color-mix(in srgb, var(--primary) 22%, transparent)',
-              }}
-            >
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{
-                  background: 'linear-gradient(135deg, var(--primary), var(--primary-d))',
-                  boxShadow: '0 4px 12px color-mix(in srgb, var(--primary) 30%, transparent)',
-                }}
-              >
-                <Disc3 size={16} className="text-white" strokeWidth={2} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-semibold text-[var(--text)]">You're the host</p>
-                <p className="text-[11px] text-[var(--muted)] mt-0.5 leading-snug">
-                  Use the button above or open the Queue tab to add music.
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        ) : (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="flex items-center gap-2 text-[11px] text-[var(--faint)]"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] animate-pulse" />
-            Synchronized · Ready for playback
-          </motion.div>
-        )}
-      </div>
-    );
-  }
-
-  /* ─────────── ACTIVE PLAYER ─────────── */
+  const light = variant === 'mobileLight';
   return (
-    <div className="flex flex-col items-center gap-6 w-full max-w-sm min-w-0 mx-auto px-2">
-
-      {/* Vinyl / album art */}
-      <div className="relative w-full flex items-center justify-center pt-2 pb-4">
-        {/* Ambient glow behind art */}
+    <div className={`flex items-center gap-2 sm:gap-3 w-full ${light ? 'px-1' : 'px-1'}`}>
+      <span
+        className={`text-[11px] font-medium tabular-nums shrink-0 ${light ? 'w-10 text-white/75' : 'w-9 text-right'}`}
+        style={light ? undefined : { color: 'var(--faint)' }}
+      >
+        {formatTime(currentTime)}
+      </span>
+      <div
+        className={`flex-1 relative rounded-full min-w-0 ${light ? 'h-0.5' : 'h-[3px]'}`}
+        style={{ background: light ? 'rgba(255,255,255,0.2)' : 'var(--border)' }}
+      >
         <div
-          className={`absolute w-64 h-64 rounded-full blur-3xl pointer-events-none transition-opacity duration-700 ${isPlaying ? 'opacity-40' : 'opacity-15'}`}
-          style={{ background: 'radial-gradient(circle, var(--primary) 0%, var(--secondary) 60%, transparent 100%)' }}
-        />
-
-        {/* Vinyl disc */}
-        <div
-          className={`relative w-48 h-48 rounded-full transition-all duration-700 ${isPlaying ? 'animate-spin-slow' : ''}`}
+          className="absolute h-full rounded-full transition-all duration-100"
           style={{
-            background: 'conic-gradient(from 0deg, var(--surface-3), var(--surface), var(--surface-3), var(--surface), var(--surface-3))',
-            boxShadow: isPlaying
-              ? '0 0 0 1px var(--border-2), 0 0 40px color-mix(in srgb, var(--primary) 25%, transparent), 0 20px 60px rgba(0,0,0,0.6)'
-              : '0 0 0 1px var(--border), 0 10px 40px rgba(0,0,0,0.5)',
+            background: light ? '#ffffff' : 'var(--primary)',
+            width: `${progress}%`,
           }}
-        >
-          {/* Vinyl grooves */}
-          {[0.85, 0.72, 0.60].map((r) => (
-            <div
-              key={r}
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
-              style={{
-                width: `${r * 100}%`,
-                height: `${r * 100}%`,
-                border: '1px solid color-mix(in srgb, var(--text) 4%, transparent)',
-              }}
-            />
-          ))}
-
-          {/* Center label with art */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[58%] h-[58%] rounded-full overflow-hidden"
-            style={{ border: '2px solid color-mix(in srgb, var(--border) 60%, transparent)', boxShadow: '0 2px 12px rgba(0,0,0,0.6)' }}
-          >
-            {currentTrack?.art ? (
-              <img src={currentTrack.art} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, color-mix(in srgb, var(--primary) 25%, transparent), color-mix(in srgb, var(--secondary) 20%, transparent))' }}
-              >
-                <Music2 size={28} style={{ color: 'var(--muted)' }} strokeWidth={1.5} />
-              </div>
-            )}
-          </div>
-
-          {/* Center hole */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full"
-            style={{ background: 'var(--bg)', border: '1px solid var(--border-2)' }}
-          />
-        </div>
-
-        {/* Pulse ring */}
-        {isPlaying && (
-          <div
-            className="absolute w-48 h-48 rounded-full animate-pulse-ring"
-            style={{ border: '1px solid color-mix(in srgb, var(--primary) 30%, transparent)', animationDuration: '2.4s' }}
-          />
-        )}
-      </div>
-
-      {/* Track info */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentTrack.id || currentTrack.name}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.25 }}
-          className="text-center w-full px-2"
-        >
-          <p className="font-bold text-[17px] text-[var(--text)] truncate leading-snug">{currentTrack.name}</p>
-          <p className="text-[var(--muted)] text-sm mt-0.5 truncate">{currentTrack.artist}</p>
-        </motion.div>
-      </AnimatePresence>
-
-      {/* Waveform */}
-      <div className="w-full px-2">
-        <WaveformVisualizer data={analyserData} isPlaying={isPlaying} />
-      </div>
-
-      {needsTapToPlay && (
-        <button
-          type="button"
-          onClick={onTapToPlay}
-          className="w-full max-w-sm mx-auto rounded-xl px-4 py-3 text-sm font-semibold btn-primary"
-        >
-          Tap to enable audio (iOS / browser)
-        </button>
-      )}
-
-      {/* Progress */}
-      <div className="w-full flex items-center gap-3 px-1">
-        <span className="text-[11px] font-medium w-9 text-right tabular-nums" style={{ color: 'var(--faint)' }}>
-          {formatTime(currentTime)}
-        </span>
+        />
         <input
           type="range"
           min={0}
           max={duration || 100}
           value={currentTime}
-          onChange={(e) => isHost && onSeek(Number(e.target.value))}
-          disabled={!isHost}
-          className="flex-1"
+          onChange={(e) => playbackControls && onSeek(Number(e.target.value))}
+          disabled={!playbackControls}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-default"
+        />
+      </div>
+      <span
+        className={`text-[11px] font-medium tabular-nums shrink-0 ${light ? 'w-10 text-white/75' : 'w-9'}`}
+        style={light ? undefined : { color: 'var(--faint)' }}
+      >
+        {formatTime(duration)}
+      </span>
+    </div>
+  );
+}
+
+function TransportCluster({
+  isPlaying, playbackControls, onPlay, onPause, onNext, onPrev,
+  playIconLarge, repeatUiOn, onRepeatToggle, compact,
+  tone = 'theme',
+}) {
+  const gap = compact ? 'gap-4' : playIconLarge ? 'gap-6' : 'gap-4';
+  const sz = compact ? 18 : playIconLarge ? 22 : 20;
+  const szSm = compact ? 16 : playIconLarge ? 17 : 16;
+  const playSz = compact ? 22 : playIconLarge ? 22 : 20;
+  const btnPlay = compact ? 'w-14 h-14' : playIconLarge ? 'w-16 h-16' : 'w-12 h-12';
+
+  const isDark = tone === 'dark';
+  const shuffleDis = isDark ? 'text-white/35' : '';
+  const shuffleDisStyle = !isDark ? { color: 'var(--faint)' } : undefined;
+  const nav = isDark ? 'text-white/45 hover:text-white/80 disabled:opacity-20' : 'text-[var(--muted)] hover:text-[var(--text)] disabled:opacity-25';
+
+  return (
+    <div className={`flex items-center justify-center ${gap}`}>
+      <button
+        type="button"
+        disabled
+        title="Shuffle is coming soon"
+        className={`transition-all disabled:opacity-25 shrink-0 ${shuffleDis}`}
+        style={shuffleDisStyle}
+      >
+        <Shuffle size={szSm} strokeWidth={2} />
+      </button>
+
+      <button type="button" onClick={onPrev} disabled={!playbackControls} className={`transition-colors shrink-0 ${nav}`}>
+        <SkipBack size={sz} strokeWidth={1.8} fill="currentColor" />
+      </button>
+
+      <button
+        type="button"
+        onClick={isPlaying ? onPause : onPlay}
+        className={`relative rounded-full flex items-center justify-center transition-all duration-200 hover:scale-[1.04] shrink-0 ${btnPlay} bg-white text-black shadow-[0_8px_28px_rgba(0,0,0,0.35)]`}
+      >
+        {isPlaying
+          ? <Pause size={playSz} fill="currentColor" strokeWidth={0} className="text-black" />
+          : <Play size={playSz} fill="currentColor" strokeWidth={0} className="text-black ml-0.5" />
+        }
+      </button>
+
+      <button type="button" onClick={onNext} disabled={!playbackControls} className={`transition-colors shrink-0 ${nav}`}>
+        <SkipForward size={sz} strokeWidth={1.8} fill="currentColor" />
+      </button>
+
+      <button
+        type="button"
+        onClick={onRepeatToggle}
+        title={repeatUiOn ? 'Repeat on (visual)' : 'Repeat off (visual)'}
+        className="relative shrink-0 transition-colors"
+        style={{
+          color: repeatUiOn ? SPOTIFY_GREEN : (isDark ? 'rgba(255,255,255,0.35)' : 'var(--faint)'),
+        }}
+      >
+        <Repeat size={szSm} strokeWidth={2} />
+        {repeatUiOn && (
+          <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#1DB954]" aria-hidden />
+        )}
+      </button>
+    </div>
+  );
+}
+
+function VolumeCluster({ muted, volume, volPct, setMuted, onVolume, prevVol, setPrevVol }) {
+  return (
+    <div className="flex items-center gap-2 min-w-0 max-w-[200px] w-full sm:w-auto justify-end">
+      <button
+        type="button"
+        onClick={() => {
+          if (muted) { onVolume(prevVol); } else { setPrevVol(volume); onVolume(0); }
+          setMuted(!muted);
+        }}
+        className="text-[var(--faint)] hover:text-[var(--muted)] transition-colors shrink-0"
+        aria-label={muted || volume === 0 ? 'Unmute' : 'Mute'}
+      >
+        {muted || volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
+      </button>
+      <div className="flex-1 relative h-[3px] rounded-full min-w-[72px] max-w-[120px]" style={{ background: 'var(--border)' }}>
+        <div
+          className="absolute h-full rounded-full transition-all duration-100 pointer-events-none"
           style={{
-            background: `linear-gradient(to right, var(--primary) ${progress}%, var(--border) ${progress}%)`,
-            height: '3px', borderRadius: '99px',
-            WebkitAppearance: 'none', appearance: 'none',
+            background: 'var(--primary)',
+            width: `${volPct}%`,
           }}
         />
-        <span className="text-[11px] font-medium w-9 tabular-nums" style={{ color: 'var(--faint)' }}>
-          {formatTime(duration)}
-        </span>
-      </div>
-
-      {/* Controls */}
-      <div className="flex items-center justify-center gap-6 w-full">
-        <button
-          disabled
-          title="Shuffle is coming soon"
-          className="transition-all disabled:opacity-30"
-          style={{ color: 'var(--faint)' }}
-        >
-          <Shuffle size={17} strokeWidth={2} />
-        </button>
-
-        <button
-          onClick={onPrev}
-          disabled={!isHost}
-          className="text-[var(--muted)] hover:text-[var(--text)] transition-colors disabled:opacity-30"
-        >
-          <SkipBack size={22} strokeWidth={1.8} fill="currentColor" />
-        </button>
-
-        <button
-          onClick={isPlaying ? onPause : onPlay}
-          className="relative w-16 h-16 rounded-full flex items-center justify-center text-white transition-all duration-200 btn-primary hover:scale-105"
-        >
-          {isPlaying
-            ? <Pause size={22} fill="white" strokeWidth={0} />
-            : <Play  size={22} fill="white" strokeWidth={0} className="ml-1" />
-          }
-          {isPlaying && (
-            <span
-              className="absolute inset-0 rounded-full animate-ping"
-              style={{ border: '2px solid color-mix(in srgb, var(--primary) 40%, transparent)', animationDuration: '2s' }}
-            />
-          )}
-        </button>
-
-        <button
-          onClick={onNext}
-          disabled={!isHost}
-          className="text-[var(--muted)] hover:text-[var(--text)] transition-colors disabled:opacity-30"
-        >
-          <SkipForward size={22} strokeWidth={1.8} fill="currentColor" />
-        </button>
-
-        <button
-          disabled
-          title="Repeat is coming soon"
-          className="transition-all disabled:opacity-30"
-          style={{ color: 'var(--faint)' }}
-        >
-          <Repeat size={17} strokeWidth={2} />
-        </button>
-      </div>
-
-      {/* Volume */}
-      <div className="flex items-center gap-3 w-full px-1">
-        <button onClick={toggleMute} className="text-[var(--faint)] hover:text-[var(--muted)] transition-colors">
-          {muted || volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
-        </button>
         <input
           type="range"
-          min={0} max={1} step={0.01}
+          min={0}
+          max={1}
+          step={0.01}
           value={muted ? 0 : volume}
           onChange={(e) => { setMuted(false); onVolume(Number(e.target.value)); }}
-          className="flex-1"
-          style={{
-            background: `linear-gradient(to right, var(--primary) ${volPct}%, var(--border) ${volPct}%)`,
-            height: '3px', borderRadius: '99px',
-            WebkitAppearance: 'none', appearance: 'none',
-          }}
+          aria-label="Volume"
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
         />
-        <span className="text-[11px] w-8 text-right tabular-nums" style={{ color: 'var(--faint)' }}>
-          {Math.round(volPct)}%
-        </span>
+      </div>
+      <span className="text-[10px] w-8 text-right tabular-nums shrink-0" style={{ color: 'var(--faint)' }}>
+        {Math.round(volPct)}
+      </span>
+    </div>
+  );
+}
+
+export default function AudioPlayer({
+  currentTrack, isPlaying, currentTime, duration,
+  volume, onPlay, onPause, onSeek,
+  onVolume, onNext, onPrev, isHost,
+  /** When set, overrides `isHost` for transport + seek (e.g. listeners with “everyone” permissions). */
+  canControlPlayback,
+  needsTapToPlay, onTapToPlay,
+  onOpenAddTracks,
+}) {
+  const [muted, setMuted] = useState(false);
+  const [prevVol, setPrevVol] = useState(0.8);
+  const [repeatUiOn, setRepeatUiOn] = useState(true);
+
+  const playbackControls = canControlPlayback !== undefined && canControlPlayback !== null
+    ? canControlPlayback
+    : isHost;
+
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const volPct = (muted ? 0 : volume) * 100;
+
+  const dockChrome = 'fixed bottom-0 left-0 right-0 z-[60] border-t border-[color-mix(in_srgb,var(--border)_70%,transparent)] backdrop-blur-md';
+  const dockPadDesktop = 'pb-[calc(0.65rem+env(safe-area-inset-bottom,0px))] pt-2.5 px-3 sm:px-5 bg-[color-mix(in_srgb,var(--bg)_96%,var(--surface))]';
+  const dockPadMobile = 'pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3 px-3 bg-black';
+
+  const queueShortcutClass =
+    'shrink-0 w-10 h-10 min-h-10 min-w-10 rounded-full flex items-center justify-center overflow-hidden btn-primary border border-white/15 shadow-lg transition-transform hover:brightness-105 active:scale-95 disabled:opacity-40 disabled:pointer-events-none disabled:shadow-none';
+
+  /* ─────────── EMPTY STATE ─────────── */
+  if (!currentTrack) {
+    return (
+      <>
+        <div className={`lg:hidden flex flex-col ${dockChrome} ${dockPadMobile}`}>
+          <div className="flex items-center justify-between gap-3 min-h-[52px]">
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] text-white/45 leading-snug">
+                {isHost ? 'Add a track from the Music tab' : 'Waiting for the host…'}
+              </p>
+            </div>
+            <button
+              type="button"
+              className={queueShortcutClass}
+              aria-label={isHost ? 'Open Music tab to add tracks' : 'Open Music tab'}
+              disabled={!onOpenAddTracks}
+              onClick={() => onOpenAddTracks?.()}
+            >
+              <Sparkles size={18} strokeWidth={2} aria-hidden />
+            </button>
+          </div>
+          {isHost && onOpenAddTracks && (
+            <button type="button" onClick={onOpenAddTracks} className="mt-2 w-full py-2.5 rounded-xl text-xs font-bold btn-primary">
+              <Plus size={16} className="inline mr-1.5 align-text-bottom" strokeWidth={2.5} />
+              Add tracks
+            </button>
+          )}
+        </div>
+
+        <div className={`hidden lg:flex ${dockChrome} ${dockPadDesktop} items-center justify-center min-h-[64px]`}>
+          <p className="text-xs font-medium text-[var(--muted)]">
+            {isHost ? 'No track playing · Add audio from the queue' : 'Waiting for the host to queue a track…'}
+          </p>
+        </div>
+      </>
+    );
+  }
+
+  /* ─────────── ACTIVE PLAYER ─────────── */
+  return (
+    <>
+      {/* Mobile dock — screenshot-style */}
+      <div className={`lg:hidden flex flex-col ${dockChrome} ${dockPadMobile} gap-3`}>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex-1 min-w-0 flex justify-center">
+            <TransportCluster
+              compact
+              tone="dark"
+              isPlaying={isPlaying}
+              playbackControls={playbackControls}
+              onPlay={onPlay}
+              onPause={onPause}
+              onNext={onNext}
+              onPrev={onPrev}
+              playIconLarge={false}
+              repeatUiOn={repeatUiOn}
+              onRepeatToggle={() => setRepeatUiOn((v) => !v)}
+            />
+          </div>
+          <button
+            type="button"
+            className={queueShortcutClass}
+            aria-label={isHost ? 'Open Music tab to add tracks' : 'Open Music tab'}
+            disabled={!onOpenAddTracks}
+            onClick={() => onOpenAddTracks?.()}
+          >
+            <Sparkles size={18} strokeWidth={2} aria-hidden />
+          </button>
+        </div>
+
+        {needsTapToPlay && (
+          <button type="button" onClick={onTapToPlay} className="w-full rounded-xl px-4 py-2.5 text-xs font-semibold btn-primary">
+            Tap to enable audio
+          </button>
+        )}
+
+        {!playbackControls && (
+          <div className="flex items-center justify-center gap-2 text-[10px] rounded-lg px-3 py-2 text-white/45 bg-white/5 border border-white/10">
+            <Lock size={11} />
+            Host controls playback
+          </div>
+        )}
+
+        <ProgressSegment
+          variant="mobileLight"
+          currentTime={currentTime}
+          duration={duration}
+          progress={progress}
+          playbackControls={playbackControls}
+          onSeek={onSeek}
+        />
       </div>
 
-      {/* Host-only notice */}
-      {!isHost && (
-        <div className="flex items-center gap-2 text-[11px] rounded-xl px-4 py-2.5 w-full justify-center" style={{ color: 'var(--faint)', background: 'var(--surface)', border: '1px solid var(--border)' }}>
-          <Lock size={11} />
-          Host controls playback
+      {/* Desktop dock */}
+      <div className={`hidden lg:flex ${dockChrome} ${dockPadDesktop} flex-col gap-2.5`}>
+        <div className="max-w-[1400px] w-full mx-auto">
+          <ProgressSegment
+            currentTime={currentTime}
+            duration={duration}
+            progress={progress}
+            playbackControls={playbackControls}
+            onSeek={onSeek}
+          />
         </div>
-      )}
-    </div>
+
+        <div className="max-w-[1400px] w-full mx-auto flex flex-wrap items-center gap-4 min-h-[52px]">
+          <div className="flex items-center gap-3 min-w-0 flex-[1_1_200px] max-w-md">
+            <div
+              className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border flex items-center justify-center"
+              style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}
+            >
+              {currentTrack?.art ? (
+                <img src={currentTrack.art} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <Music2 size={20} style={{ color: 'var(--faint)' }} strokeWidth={1.5} />
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-[var(--text)] truncate leading-tight">{currentTrack.name}</p>
+              <p className="text-[11px] text-[var(--muted)] truncate mt-0.5">{currentTrack.artist}</p>
+            </div>
+          </div>
+
+          <div className="flex-[2_1_320px] flex justify-center order-last lg:order-none w-full lg:w-auto">
+            <TransportCluster
+              isPlaying={isPlaying}
+              playbackControls={playbackControls}
+              onPlay={onPlay}
+              onPause={onPause}
+              onNext={onNext}
+              onPrev={onPrev}
+              playIconLarge={false}
+              repeatUiOn={repeatUiOn}
+              onRepeatToggle={() => setRepeatUiOn((v) => !v)}
+              compact={false}
+            />
+          </div>
+
+          <div className="flex items-center gap-3 flex-[1_1_180px] justify-end ml-auto w-full sm:w-auto">
+            <VolumeCluster
+              muted={muted}
+              volume={volume}
+              volPct={volPct}
+              setMuted={setMuted}
+              onVolume={onVolume}
+              prevVol={prevVol}
+              setPrevVol={setPrevVol}
+            />
+          </div>
+        </div>
+
+        {(needsTapToPlay || !playbackControls) && (
+          <div className="max-w-[1400px] w-full mx-auto flex flex-wrap gap-2 justify-center pb-1">
+            {needsTapToPlay && (
+              <button type="button" onClick={onTapToPlay} className="rounded-lg px-4 py-2 text-xs font-semibold btn-primary">
+                Tap to enable audio
+              </button>
+            )}
+            {!playbackControls && (
+              <div className="flex items-center gap-2 text-[11px] rounded-lg px-3 py-2" style={{ color: 'var(--faint)', background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                <Lock size={11} />
+                Host controls playback
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </>
   );
 }

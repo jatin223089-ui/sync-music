@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Copy, Check, QrCode, Link } from 'lucide-react';
+import { X, Copy, Check, Link } from 'lucide-react';
+import BrandLogo from './BrandLogo';
 import { getRoomInviteUrl } from '../utils/siteUrl';
 
 export default function ShareModal({ roomCode, onClose }) {
@@ -50,13 +51,12 @@ export default function ShareModal({ roomCode, onClose }) {
           exit={{ opacity: 0, scale: 0.92, y: 20 }}
           transition={{ type: 'spring', damping: 20, stiffness: 280 }}
           onClick={(e) => e.stopPropagation()}
-          className="rounded-2xl w-full max-w-sm overflow-hidden border card-glow"
-          style={{ background: 'var(--bg-2)', borderColor: 'var(--border)' }}
+          className="rounded-2xl w-full max-w-sm overflow-hidden surface-3d card-glow"
         >
           <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
-            <div className="flex items-center gap-2">
-              <QrCode size={16} style={{ color: 'var(--primary)' }} />
-              <span className="font-bold text-sm" style={{ color: 'var(--text)' }}>Invite to Room</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <BrandLogo size={28} className="rounded-lg shrink-0" />
+              <span className="font-bold text-sm truncate" style={{ color: 'var(--text)' }}>Invite to Room</span>
             </div>
             <button
               onClick={onClose}

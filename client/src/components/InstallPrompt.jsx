@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Download, Share, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import BrandLogo from './BrandLogo';
 
 const DISMISS_KEY = 'syncmusic_pwa_install_dismissed';
 
@@ -80,11 +81,9 @@ export default function InstallPrompt() {
         }}
       >
         <div
-          className="relative rounded-2xl border p-4 shadow-2xl backdrop-blur-md"
+          className="relative rounded-2xl border p-4 nav-dock shadow-2xl"
           style={{
-            background: 'color-mix(in srgb, var(--bg-2) 92%, transparent)',
-            borderColor: 'color-mix(in srgb, var(--primary) 30%, var(--border))',
-            boxShadow: '0 16px 48px rgba(0,0,0,0.35)',
+            borderColor: 'color-mix(in srgb, var(--primary) 22%, var(--border))',
           }}
         >
           <button
@@ -98,16 +97,9 @@ export default function InstallPrompt() {
           </button>
 
           <div className="flex gap-3 pr-8">
-            <motion.div
-              className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-              style={{
-                background: 'linear-gradient(135deg, var(--primary), var(--primary-d))',
-              }}
-            >
-              <Download size={20} className="text-white" />
-            </motion.div>
+            <BrandLogo size={44} className="rounded-xl shrink-0" />
             <div className="min-w-0">
-              <p className="font-bold text-sm text-[var(--text)]">Install sync.music</p>
+              <p className="font-bold text-sm text-[var(--text)]">Install Beatsync</p>
               <p className="text-xs text-[var(--muted)] mt-1 leading-relaxed">
                 {deferredPrompt
                   ? 'Add to your home screen for a full-screen app experience.'

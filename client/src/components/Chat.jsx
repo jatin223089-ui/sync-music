@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, MessageSquare } from 'lucide-react';
 import { generateAvatarColor, getInitials } from '../utils/formatTime';
 
-export default function Chat({ messages, onSend, myId }) {
+export default function Chat({ messages, onSend, myId, showTitle = true }) {
   const [text, setText] = useState('');
   const bottomRef = useRef(null);
 
@@ -26,6 +26,7 @@ export default function Chat({ messages, onSend, myId }) {
 
   return (
     <div className="flex flex-col h-full min-h-0">
+      {showTitle && (
       <h3 className="text-xs font-semibold uppercase tracking-wider mb-3 flex items-center gap-2" style={{ color: 'var(--faint)' }}>
         <MessageSquare size={11} />
         Chat
@@ -35,15 +36,18 @@ export default function Chat({ messages, onSend, myId }) {
           </span>
         )}
       </h3>
+      )}
 
-      <div className="flex-1 overflow-y-auto space-y-3 min-h-0 pr-1 -mr-1">
+      <div
+        className={`flex-1 overflow-y-auto min-h-0 min-w-0 pr-1 -mr-1 ${
+          messages.length === 0 ? 'flex flex-col flex-1 justify-start pt-6' : 'space-y-3'
+        }`}
+      >
         {messages.length === 0 ? (
-          <div className="text-center py-6">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2" style={{ background: 'var(--surface)' }}>
-              <MessageSquare size={16} style={{ color: 'var(--faint)' }} />
-            </div>
+          <div className="rounded-xl px-3 py-10 text-center border border-[color-mix(in_srgb,var(--border)_60%,transparent)] bg-[var(--surface)]">
+            <MessageSquare size={28} className="mx-auto mb-3 text-[var(--faint)] opacity-60" aria-hidden />
             <p className="text-xs font-medium" style={{ color: 'var(--muted)' }}>No messages yet</p>
-            <p className="text-[10px] mt-0.5" style={{ color: 'var(--faint)' }}>Say hi to the room</p>
+            <p className="text-[11px] mt-2 leading-relaxed max-w-[14rem] mx-auto" style={{ color: 'var(--faint)' }}>Start the conversation.</p>
           </div>
         ) : (
           messages.map((msg) => {
@@ -81,9 +85,8 @@ export default function Chat({ messages, onSend, myId }) {
 
       <div className="mt-3 flex gap-2">
         <input
-          className="flex-1 rounded-xl px-3 py-2 text-xs outline-none transition-all border"
-          style={{ background: 'var(--surface)', color: 'var(--text)', borderColor: 'var(--border)' }}
-          placeholder="Say something…"
+          className="ui-input flex-1 !py-2 !px-3 !text-xs rounded-xl"
+          placeholder="Message"
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKey}
@@ -92,9 +95,9 @@ export default function Chat({ messages, onSend, myId }) {
         <button
           onClick={handleSend}
           disabled={!text.trim()}
-          className="btn-primary w-9 h-9 rounded-xl flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+          className="btn-primary w-9 h-9 rounded-xl flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed [&_svg]:text-[#052e1f]"
         >
-          <Send size={13} className="text-white" />
+          <Send size={13} className="text-[#052e1f]" />
         </button>
       </div>
     </div>

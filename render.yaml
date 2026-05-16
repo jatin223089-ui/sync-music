@@ -1,0 +1,18 @@
+# Deploy the realtime server to Render from this Git repo root.
+# 1. Push this repo (with render.yaml) to GitHub/GitLab.
+# 2. In Render: New → Blueprint → connect repo → approve this file.
+# 3. After the service URL is assigned, set ALLOWED_ORIGINS to your frontend origin.
+# Set JAMENDO_CLIENT_ID for catalog search (https://devportal.jamendo.com).
+# Frontend (Vercel): set build env VITE_SERVER_URL and VITE_PUBLIC_SITE_URL → see DEPLOYMENT.md
+
+version: '1'
+
+services:
+  - type: web
+    name: sync-music-server
+    runtime: node
+    region: oregon
+    rootDir: server
+    buildCommand: npm install --omit=dev
+    startCommand: npm run start
+    healthCheckPath: /health

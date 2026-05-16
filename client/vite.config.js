@@ -12,6 +12,9 @@ export default defineConfig({
       includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'pwa-192.png', 'pwa-512.png'],
       manifest: false,
       workbox: {
+        /* Ship updates immediately; avoids users stuck on an old precached CSS/JS shell. */
+        skipWaiting: true,
+        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],

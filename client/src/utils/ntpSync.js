@@ -9,6 +9,8 @@ export class NTPSync {
     this.sampleCount = sampleCount;
     this.requestTimeoutMs = requestTimeoutMs;
     this.offset = 0;
+    /** Median RTT from the last successful sync (ms), for diagnostics UI */
+    this.lastMedianRtt = 0;
     this.synced = false;
   }
 
@@ -29,6 +31,7 @@ export class NTPSync {
     samples.sort((a, b) => a.rtt - b.rtt);
     const trimmed = samples.slice(0, Math.ceil(this.sampleCount * 0.8));
     this.offset = trimmed.reduce((sum, s) => sum + s.offset, 0) / trimmed.length;
+    this.lastMedianRtt = trimmed.reduce((sum, s) => sum + s.rtt, 0) / trimmed.length;
     this.synced = true;
     return this.offset;
   }

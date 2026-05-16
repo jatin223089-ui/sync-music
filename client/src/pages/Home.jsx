@@ -17,6 +17,12 @@ const fadeUp = (delay = 0) => ({
   transition: { delay, duration: 0.55, ease: [0.22, 1, 0.36, 1] },
 });
 
+const featureGridClass = (i) => {
+  if (i === 0) return 'md:col-span-4 md:row-span-2 min-h-[200px] md:min-h-[260px]';
+  if (i === 1) return 'md:col-span-2 md:col-start-5 md:row-start-1';
+  return 'md:col-span-2 md:col-start-5 md:row-start-2';
+};
+
 const features = [
   {
     icon: Zap,
@@ -43,8 +49,8 @@ const features = [
 
 const steps = [
   { icon: Sparkles, title: 'Create a Room', desc: 'Get a unique 6-character room code in one click. No sign-up, no friction.' },
-  { icon: Users,    title: 'Invite Friends', desc: 'Share the code or scan the QR — everyone joins from any device.' },
-  { icon: Music2,   title: 'Play Together',  desc: 'The host queues tracks. Every listener hears the same moment simultaneously.' },
+  { icon: Users, title: 'Invite Friends', desc: 'Share the code or scan the QR — everyone joins from any device.' },
+  { icon: Music2, title: 'Play Together', desc: 'The host queues tracks. Every listener hears the same moment simultaneously.' },
 ];
 
 const ticker = [
@@ -92,353 +98,351 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-[var(--bg)] overflow-x-hidden">
-      <Navbar />
+    <div className="page-ambient min-h-[100dvh] overflow-x-hidden relative">
+      <div className="relative z-[1]">
+        <Navbar />
 
-      {/* ═══════════════════ HERO ═══════════════════ */}
-      <section className="relative min-h-[100dvh] flex flex-col items-center justify-center px-5 pt-[calc(5rem+env(safe-area-inset-top,0px))] pb-[calc(3rem+env(safe-area-inset-bottom,0px))] overflow-hidden">
+        {/* HERO */}
+        <section className="relative min-h-[100dvh] flex flex-col items-center justify-center px-5 pt-[calc(5.25rem+env(safe-area-inset-top,0px))] pb-[calc(3rem+env(safe-area-inset-bottom,0px))] overflow-hidden">
+          <div className="bg-mesh absolute inset-0 z-0" aria-hidden />
+          <div className="orb orb-purple w-[min(100vw,520px)] h-[min(100vw,520px)] top-[-120px] left-[-140px] animate-orb-1 opacity-[0.38]" />
+          <div className="orb orb-cyan w-[min(90vw,420px)] h-[min(90vw,420px)] bottom-[-80px] right-[-100px] animate-orb-2 opacity-[0.32]" />
 
-        {/* Ambient orbs */}
-        <div className="orb orb-purple w-[700px] h-[700px] top-[-200px] left-[-200px] animate-orb-1 opacity-80" />
-        <div className="orb orb-cyan   w-[500px] h-[500px] bottom-[-100px] right-[-100px] animate-orb-2 opacity-70" />
-        <div className="orb orb-pink   w-[400px] h-[400px] top-[40%] right-[10%] animate-orb-1 opacity-50" style={{ animationDelay: '-6s' }} />
+          <WaveformBg />
 
-        <WaveformBg />
+          <div
+            className="absolute inset-0 pointer-events-none z-[1]"
+            style={{ background: 'radial-gradient(ellipse 72% 58% at 50% 52%, transparent 25%, var(--bg) 78%)' }}
+          />
 
-        {/* Radial vignette to focus center */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse 70% 60% at 50% 55%, transparent 20%, var(--bg) 75%)' }}
-        />
-
-        <div className="relative z-10 w-full max-w-[min(100%,42rem)] mx-auto text-center min-w-0 px-0">
-
-          {/* Built with love badge */}
-          <motion.div {...fadeUp(0)} className="flex justify-center mb-6 px-1">
-            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--surface)]/70 border border-[var(--border)] text-xs font-medium text-[var(--muted)] backdrop-blur-md max-w-full text-center">
-              Built with <Heart size={11} className="text-red-400 fill-red-400 animate-heartbeat" /> for music lovers
-            </span>
-          </motion.div>
-
-          {/* Badge */}
-          <motion.div {...fadeUp(0.05)} className="flex flex-wrap justify-center gap-2 mb-8 px-1">
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--primary)]/10 border border-[var(--primary)]/25 text-xs font-medium max-w-full" style={{ color: 'var(--primary)' }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] animate-pulse" />
-              Open source · Real-time sync
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] animate-pulse" />
-            </span>
-          </motion.div>
-
-          <motion.h1 {...fadeUp(0.12)} className="text-[clamp(2rem,9.5vw,5.5rem)] font-black leading-[1.05] tracking-[-0.03em] mb-6 text-[var(--text)] px-1 text-balance max-w-full">
-            Listen Together,
-            <br />
-            <span className="gradient-text">In Perfect Sync.</span>
-          </motion.h1>
-
-          <motion.p {...fadeUp(0.22)} className="text-base sm:text-lg md:text-xl text-[var(--muted)] leading-relaxed mb-12 max-w-xl mx-auto px-1 text-balance hyphens-none [overflow-wrap:anywhere]">
-            Synchronized music across every device — millisecond-accurate,
-            no download required, completely free.
-          </motion.p>
-
-          {/* Join / Create card */}
-          <motion.div
-            {...fadeUp(0.30)}
-            className="glass-lighter rounded-3xl p-6 sm:p-8 card-glow w-full max-w-lg min-w-0 mx-auto text-left space-y-4 pb-[max(1.5rem,calc(1rem+env(safe-area-inset-bottom,0px)))]"
-          >
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--faint)' }}>
-                Your name
-              </label>
-              <input
-                className="w-full bg-[var(--bg-2)] border border-[var(--border)] focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)]/20 rounded-xl px-4 py-3 text-[var(--text)] placeholder-[var(--faint)] text-sm transition-all outline-none"
-                placeholder="e.g. Alex"
-                value={name}
-                onChange={(e) => { setName(e.target.value); setError(''); }}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider pl-1" style={{ color: 'var(--faint)' }}>
-                Room code
-              </label>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
-                <input
-                  className="min-w-0 flex-1 bg-[var(--bg-2)] border border-[var(--border)] focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)]/20 rounded-xl px-4 py-3 text-[var(--text)] placeholder-[var(--faint)] text-sm uppercase tracking-[0.25em] font-mono transition-all outline-none"
-                  placeholder="ABC123"
-                  value={code}
-                  maxLength={6}
-                  onChange={(e) => { setCode(e.target.value.toUpperCase()); setError(''); }}
-                  onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
-                />
-                <button
-                  onClick={handleJoin}
-                  className="btn-primary w-full sm:w-auto justify-center px-5 py-3 rounded-xl font-semibold text-sm flex items-center gap-2 whitespace-nowrap shrink-0"
-                >
-                  Join <ArrowRight size={15} strokeWidth={2.5} />
-                </button>
-              </div>
-            </div>
-
-            {error && (
-              <motion.p
-                initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-                className="text-red-400 text-xs pl-1 flex items-center gap-1.5"
-              >
-                <span className="w-1 h-1 rounded-full bg-red-400" /> {error}
-              </motion.p>
-            )}
-
-            <div className="flex items-center gap-3 py-1">
-              <div className="flex-1 h-px bg-[var(--border)]" />
-              <span className="text-xs font-medium" style={{ color: 'var(--faint)' }}>or start fresh</span>
-              <div className="flex-1 h-px bg-[var(--border)]" />
-            </div>
-
-            <button
-              onClick={handleCreate}
-              className="group w-full px-2 py-3.5 rounded-xl border border-[var(--border-2)] hover:border-[var(--primary)]/40 bg-[var(--surface)]/40 hover:bg-[var(--primary)]/8 text-[var(--muted)] hover:text-[var(--text)] text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-200"
-            >
-              <span className="w-5 h-5 rounded-lg flex items-center justify-center" style={{ background: 'color-mix(in srgb, var(--primary) 20%, transparent)', color: 'var(--primary)' }}>+</span>
-              Create New Room
-              <ArrowRight size={14} className="ml-auto opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
-            </button>
-          </motion.div>
-
-          {/* Live stats pills */}
-          <motion.div {...fadeUp(0.42)} className="mt-8 grid grid-cols-2 gap-x-3 gap-y-2 sm:gap-x-[18px] px-1 sm:px-[14px] max-w-lg mx-auto w-full">
-            <div className="flex items-center justify-center gap-2 px-2 py-2 rounded-full bg-emerald-500/8 border border-emerald-500/20 text-sm text-right">
-              <Radio size={13} className="text-emerald-400" />
-              <span className="text-[var(--muted)]"><strong className="text-emerald-400 font-semibold">{stats.activeRooms}</strong> rooms live</span>
-            </div>
-            <div className="flex items-center justify-center gap-2 px-2 py-2 rounded-full text-sm text-right" style={{ background: 'color-mix(in srgb, var(--primary) 8%, transparent)', borderColor: 'color-mix(in srgb, var(--primary) 20%, transparent)', borderWidth: '1px', borderStyle: 'solid' }}>
-              <Users size={13} style={{ color: 'var(--primary)' }} />
-              <span className="text-[var(--muted)]"><strong style={{ color: 'var(--primary)' }} className="font-semibold">{stats.totalListeners}</strong> listening now</span>
-            </div>
-          </motion.div>
-        </div>
-
-        <motion.div
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.8 }}
-          className="hidden sm:flex absolute bottom-10 left-1/2 -translate-x-1/2 flex-row flex-wrap items-center justify-center gap-2 text-center pointer-events-none"
-        >
-          <div className="w-px h-10 bg-gradient-to-b from-transparent via-[var(--faint)] to-[var(--primary)]/40" />
-          <div className="w-1 h-1 rounded-[13px] bg-[var(--primary)]/40 font-light text-[11px] text-center" />
-        </motion.div>
-      </section>
-
-      {/* ═══════════════════ TICKER ═══════════════════ */}
-      <div className="border-y border-[var(--border)]/60 py-3.5 overflow-hidden bg-[var(--surface)]/40">
-        <div className="flex animate-ticker whitespace-nowrap">
-          {[...ticker, ...ticker].map((t, i) => (
-            <span key={i} className="inline-flex items-center gap-3 px-5 text-xs font-medium" style={{ color: 'var(--faint)' }}>
-              <span className="w-1 h-1 rounded-full bg-[var(--primary)]/50" />
-              {t}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* ═══════════════════ FEATURES ═══════════════════ */}
-      <section id="features" className="py-28 px-5">
-        <div className="max-w-5xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }} transition={{ duration: 0.55 }}
-            className="text-center mb-16"
-          >
-            <p className="text-xs font-semibold tracking-[0.2em] uppercase mb-4" style={{ color: 'var(--primary)' }}>Features</p>
-            <h2 className="text-3xl sm:text-4xl font-black tracking-tight mb-4 text-[var(--text)]">
-              Built for the{' '}
-              <span className="gradient-text">listening experience</span>
-            </h2>
-            <p className="text-[var(--muted)] max-w-md mx-auto leading-relaxed">
-              Every detail is designed to make group listening feel like you're in the same room.
-            </p>
-          </motion.div>
-
-          <div className="grid sm:grid-cols-3 gap-5">
-            {features.map((f, i) => (
-              <motion.div
-                key={f.title}
-                initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }} transition={{ delay: i * 0.12, duration: 0.5 }}
-                className="relative rounded-2xl p-6 bg-[var(--surface)] border transition-all duration-300 group hover:-translate-y-1.5"
-                style={{
-                  borderColor: 'var(--border)',
-                  boxShadow: '0 0 0 1px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.04)',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.borderColor = `color-mix(in srgb, ${f.accent} 40%, transparent)`}
-                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
-              >
-                {/* Accent bg gradient */}
-                <div
-                  className="absolute inset-0 rounded-2xl opacity-30 pointer-events-none"
-                  style={{ background: `linear-gradient(to bottom, color-mix(in srgb, ${f.accent} 10%, transparent), transparent)` }}
-                />
-                <div className="relative z-10">
-                  <div
-                    className="w-11 h-11 rounded-xl flex items-center justify-center mb-5"
-                    style={{ background: `color-mix(in srgb, ${f.accent} 14%, transparent)`, border: `1px solid color-mix(in srgb, ${f.accent} 25%, transparent)` }}
-                  >
-                    <f.icon size={20} style={{ color: f.accent }} strokeWidth={2} />
-                  </div>
-
-                  <span
-                    className="inline-block text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full mb-3"
-                    style={{ background: `color-mix(in srgb, ${f.accent} 12%, transparent)`, color: f.accent }}
-                  >
-                    {f.label}
-                  </span>
-
-                  <h3 className="font-bold text-[var(--text)] text-[15px] mb-2 leading-snug">{f.title}</h3>
-                  <p className="text-[var(--muted)] text-sm leading-relaxed">{f.desc}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════ HOW IT WORKS ═══════════════════ */}
-      <section className="py-28 px-5 relative overflow-hidden">
-        <div className="orb orb-purple w-[600px] h-[600px] top-[-100px] right-[-200px] opacity-30 pointer-events-none" />
-
-        <div className="max-w-4xl mx-auto relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <p className="text-xs font-semibold tracking-[0.2em] uppercase mb-4" style={{ color: 'var(--secondary)' }}>How it works</p>
-            <h2 className="text-3xl sm:text-4xl font-black tracking-tight mb-4 text-[var(--text)]">
-              Up and running in <span className="gradient-text">30 seconds</span>
-            </h2>
-            <p className="text-[var(--muted)]">No accounts. No downloads. Just music.</p>
-          </motion.div>
-
-          <div className="grid sm:grid-cols-3 gap-6 relative">
-            <div className="hidden sm:block absolute top-10 left-[16.5%] right-[16.5%] h-px bg-gradient-to-r from-[var(--primary)]/0 via-[var(--primary)]/30 to-[var(--primary)]/0" />
-            {steps.map((s, i) => (
-              <motion.div
-                key={s.title}
-                initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }} transition={{ delay: i * 0.15 }}
-                className="flex flex-col items-center text-center"
-              >
-                <div className="relative mb-6">
-                  <div
-                    className="w-20 h-20 rounded-2xl flex items-center justify-center"
-                    style={{
-                      background: 'linear-gradient(135deg, color-mix(in srgb, var(--primary) 15%, transparent), color-mix(in srgb, var(--secondary) 15%, transparent))',
-                      border: '1px solid color-mix(in srgb, var(--primary) 25%, transparent)',
-                    }}
-                  >
-                    <s.icon size={26} style={{ color: 'var(--primary)' }} strokeWidth={1.5} />
-                  </div>
-                  <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full text-white text-[10px] font-black flex items-center justify-center shadow-lg" style={{ background: 'var(--primary)', boxShadow: '0 4px 12px color-mix(in srgb, var(--primary) 30%, transparent)' }}>
-                    {i + 1}
-                  </span>
-                </div>
-                <h3 className="font-bold text-[var(--text)] text-[15px] mb-2">{s.title}</h3>
-                <p className="text-[var(--muted)] text-sm leading-relaxed">{s.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════ TRUST STATS ═══════════════════ */}
-      <div className="py-10 px-5 border-y border-[var(--border)]/50 bg-[var(--surface)]/30">
-        <div className="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
-          {[
-            { value: '< 1ms', label: 'Sync accuracy' },
-            { value: '∞',     label: 'Devices per room' },
-            { value: '0',     label: 'Downloads needed' },
-            { value: '100%',  label: 'Free forever' },
-          ].map((s) => (
-            <div key={s.label} className="flex flex-col items-center gap-1">
-              <span className="text-3xl font-black gradient-text">{s.value}</span>
-              <span className="text-xs font-medium" style={{ color: 'var(--faint)' }}>{s.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ═══════════════════ CTA ═══════════════════ */}
-      <section className="py-28 px-5">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.97 }} whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          className="max-w-2xl mx-auto relative"
-        >
-          <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-[var(--primary)]/15 to-[var(--secondary)]/8 blur-xl" />
-          <div className="relative glass-lighter rounded-3xl p-10 sm:p-14 text-center border card-glow" style={{ borderColor: 'color-mix(in srgb, var(--primary) 20%, transparent)' }}>
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl" style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-d))', boxShadow: '0 12px 30px color-mix(in srgb, var(--primary) 30%, transparent)' }}>
-              <Music2 size={26} className="text-white" strokeWidth={1.5} />
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-black tracking-tight mb-3 text-[var(--text)]">Ready to sync up?</h2>
-            <p className="text-[var(--muted)] mb-8 max-w-sm mx-auto leading-relaxed">
-              Create a room, share the code, and start listening together — free, instant, no sign-up.
-            </p>
-            <button
-              onClick={handleCreate}
-              className="btn-primary px-10 py-4 rounded-xl font-bold text-base inline-flex items-center gap-2.5"
-            >
-              <Sparkles size={16} strokeWidth={2} />
-              Create a Room — it's free
-            </button>
-            <div className="flex items-center justify-center gap-4 mt-6 text-xs" style={{ color: 'var(--faint)' }}>
-              <span className="flex items-center gap-1.5"><Shield size={11} /> No account needed</span>
-              <span className="w-1 h-1 rounded-full" style={{ background: 'var(--faint)' }} />
-              <span className="flex items-center gap-1.5"><Zap size={11} /> Ready in seconds</span>
-            </div>
-          </div>
-        </motion.div>
-      </section>
-
-      {/* ═══════════════════ FOOTER ═══════════════════ */}
-      <footer className="relative border-t border-[var(--border)]/60 py-12 px-5 bg-[var(--surface)]/30">
-        <div className="max-w-5xl mx-auto">
-          {/* Top row */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-8">
-            <div className="flex items-center gap-3">
-              <BrandLogo size={36} />
-              <div>
-                <p className="font-bold text-sm text-[var(--text)]">sync.music</p>
-                <p className="text-[10px]" style={{ color: 'var(--faint)' }}>Open source · Free forever</p>
-              </div>
-            </div>
-
-            <div className="flex gap-5 text-xs" style={{ color: 'var(--faint)' }}>
-              <a href="/about" className="hover:text-[var(--text)] transition-colors">About</a>
-              <a href="/#features" className="hover:text-[var(--text)] transition-colors">Features</a>
-              <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:text-[var(--text)] transition-colors flex items-center gap-1">GitHub <ExternalLink size={9} /></a>
-            </div>
-          </div>
-
-          {/* Built with love divider */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center" aria-hidden="true">
-              <div className="w-full h-px bg-gradient-to-r from-transparent via-[var(--border)] to-transparent" />
-            </div>
-            <div className="relative flex justify-center">
-              <span className="px-6 inline-flex items-center gap-2 text-sm font-medium bg-[var(--bg)] text-[var(--muted)]">
-                Built with
-                <Heart
-                  size={15}
-                  className="text-red-400 fill-red-400 animate-heartbeat"
-                />
-                for music lovers everywhere
+          <div className="depth-root relative z-10 w-full max-w-[min(100%,44rem)] mx-auto text-center min-w-0">
+            <motion.div {...fadeUp(0)} className="flex flex-wrap justify-center gap-2 mb-8 px-1">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-medium text-[var(--muted)] border border-[color-mix(in_srgb,var(--border)_82%,transparent)] bg-[color-mix(in_srgb,var(--surface)_65%,transparent)] backdrop-blur-md max-w-full">
+                Built with <Heart size={11} className="text-red-400 fill-red-400 inline shrink-0 animate-heartbeat" /> for music lovers
               </span>
+              <span className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-[11px] sm:text-xs font-semibold bg-[color-mix(in_srgb,var(--primary)_11%,transparent)] border border-[color-mix(in_srgb,var(--primary)_26%,transparent)] text-[var(--primary)] tracking-tight">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] animate-pulse shrink-0" />
+                Open source · Real-time sync
+              </span>
+            </motion.div>
+
+            <motion.h1 {...fadeUp(0.1)} className="text-[clamp(2rem,8.5vw,4.75rem)] font-extrabold leading-[1.06] tracking-[-0.035em] mb-5 text-[var(--text)] px-1 text-balance max-w-full">
+              Listen together,
+              <br />
+              <span className="gradient-text">in perfect sync.</span>
+            </motion.h1>
+
+            <motion.p {...fadeUp(0.18)} className="text-[15px] sm:text-lg text-[var(--muted)] leading-relaxed mb-10 max-w-md mx-auto px-1 text-balance [overflow-wrap:anywhere]">
+              Synchronized music across every device — millisecond-accurate,
+              no download required, completely free.
+            </motion.p>
+
+            <motion.div
+              {...fadeUp(0.26)}
+              className="surface-3d panel-lift rounded-2xl sm:rounded-3xl p-6 sm:p-8 w-full max-w-lg min-w-0 mx-auto text-left space-y-4 pb-[max(1.5rem,calc(1rem+env(safe-area-inset-bottom,0px)))] card-glow"
+            >
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-[0.14em] pl-1 font-mono-ui" style={{ color: 'var(--faint)' }}>
+                  Your name
+                </label>
+                <input
+                  className="ui-input"
+                  placeholder="e.g. Alex"
+                  value={name}
+                  onChange={(e) => { setName(e.target.value); setError(''); }}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-[0.14em] pl-1 font-mono-ui" style={{ color: 'var(--faint)' }}>
+                  Room code
+                </label>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+                  <input
+                    className="ui-input flex-1 min-w-0 uppercase tracking-[0.22em] font-mono-ui text-sm"
+                    placeholder="ABC123"
+                    value={code}
+                    maxLength={6}
+                    onChange={(e) => { setCode(e.target.value.toUpperCase()); setError(''); }}
+                    onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleJoin}
+                    className="btn-primary w-full sm:w-auto justify-center px-5 py-3 rounded-xl font-semibold text-sm flex items-center gap-2 whitespace-nowrap shrink-0"
+                  >
+                    Join <ArrowRight size={15} strokeWidth={2.5} />
+                  </button>
+                </div>
+              </div>
+
+              {error && (
+                <motion.p
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-red-400 text-xs pl-1 flex items-center gap-1.5 font-mono-ui"
+                >
+                  <span className="w-1 h-1 rounded-full bg-red-400 shrink-0" /> {error}
+                </motion.p>
+              )}
+
+              <div className="flex items-center gap-3 py-1">
+                <div className="flex-1 h-px bg-[var(--border)]" />
+                <span className="text-[10px] font-mono-ui uppercase tracking-wider" style={{ color: 'var(--faint)' }}>or start fresh</span>
+                <div className="flex-1 h-px bg-[var(--border)]" />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCreate}
+                className="group w-full px-2 py-3.5 rounded-xl btn-ghost text-sm font-semibold flex items-center justify-center gap-2"
+              >
+                <span className="w-5 h-5 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'color-mix(in srgb, var(--primary) 18%, transparent)', color: 'var(--primary)' }}>+</span>
+                Create new room
+                <ArrowRight size={14} className="ml-auto opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all shrink-0" />
+              </button>
+            </motion.div>
+
+            <motion.div {...fadeUp(0.36)} className="mt-8 grid grid-cols-2 gap-2 sm:gap-3 px-1 max-w-lg mx-auto w-full font-mono-ui">
+              <div className="flex items-center justify-center gap-2 px-2 py-2.5 rounded-xl bg-emerald-500/8 border border-emerald-500/18 text-[11px] sm:text-sm">
+                <Radio size={13} className="text-emerald-400 shrink-0" />
+                <span className="text-[var(--muted)] text-left leading-tight">
+                  <strong className="text-emerald-400 font-semibold tabular-nums">{stats.activeRooms}</strong>
+                  <span className="hidden sm:inline"> rooms</span>
+                </span>
+              </div>
+              <div
+                className="flex items-center justify-center gap-2 px-2 py-2.5 rounded-xl text-[11px] sm:text-sm"
+                style={{
+                  background: 'color-mix(in srgb, var(--primary) 7%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--primary) 18%, transparent)',
+                }}
+              >
+                <Users size={13} style={{ color: 'var(--primary)' }} className="shrink-0" />
+                <span className="text-[var(--muted)] text-left leading-tight">
+                  <strong style={{ color: 'var(--primary)' }} className="font-semibold tabular-nums">{stats.totalListeners}</strong>
+                  <span className="hidden sm:inline"> listening</span>
+                </span>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* TICKER */}
+        <div className="relative z-[1] border-y border-[color-mix(in_srgb,var(--border)_65%,transparent)] py-3 overflow-hidden bg-[color-mix(in_srgb,var(--surface)_45%,transparent)]">
+          <div className="flex animate-ticker whitespace-nowrap font-mono-ui">
+            {[...ticker, ...ticker].map((t, i) => (
+              <span key={i} className="inline-flex items-center gap-3 px-5 text-[11px] font-medium" style={{ color: 'var(--faint)' }}>
+                <span className="w-1 h-1 rounded-full bg-[var(--primary)]/45 shrink-0" />
+                {t}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* FEATURES — bento */}
+        <section id="features" className="relative z-[1] py-24 sm:py-28 px-5">
+          <div className="max-w-5xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.55 }}
+              className="text-center mb-14"
+            >
+              <p className="ai-section-kicker mb-3" style={{ color: 'var(--primary)' }}>Product</p>
+              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4 text-[var(--text)]">
+                Built for the{' '}
+                <span className="gradient-text">listening experience</span>
+              </h2>
+              <p className="text-[var(--muted)] max-w-md mx-auto leading-relaxed text-sm sm:text-base">
+                Every detail is designed to make group listening feel like you are in the same room.
+              </p>
+            </motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-6 md:grid-rows-2 gap-4 md:gap-5">
+              {features.map((f, i) => (
+                <motion.div
+                  key={f.title}
+                  initial={{ opacity: 0, y: 28 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1, duration: 0.5 }}
+                  className={`ai-feature-card relative overflow-hidden group ${featureGridClass(i)}`}
+                >
+                  <div
+                    className="absolute inset-0 opacity-25 pointer-events-none"
+                    style={{ background: `linear-gradient(155deg, color-mix(in srgb, ${f.accent} 18%, transparent), transparent 55%)` }}
+                  />
+                  <div className="relative z-10 h-full flex flex-col">
+                    <div
+                      className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center mb-4 shrink-0"
+                      style={{
+                        background: `color-mix(in srgb, ${f.accent} 14%, transparent)`,
+                        border: `1px solid color-mix(in srgb, ${f.accent} 22%, transparent)`,
+                      }}
+                    >
+                      <f.icon size={20} style={{ color: f.accent }} strokeWidth={2} />
+                    </div>
+                    <span
+                      className="inline-flex w-fit text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full mb-3 font-mono-ui"
+                      style={{ background: `color-mix(in srgb, ${f.accent} 12%, transparent)`, color: f.accent }}
+                    >
+                      {f.label}
+                    </span>
+                    <h3 className="font-bold text-[var(--text)] text-[15px] sm:text-base mb-2 leading-snug">{f.title}</h3>
+                    <p className="text-[var(--muted)] text-sm leading-relaxed flex-1">{f.desc}</p>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </div>
+        </section>
 
-          {/* Bottom copyright */}
-          <p className="text-center text-[10px] mt-6" style={{ color: 'var(--faint)' }}>
-            © {new Date().getFullYear()} sync.music — All rights reserved
-          </p>
+        {/* HOW IT WORKS */}
+        <section className="relative z-[1] py-24 sm:py-28 px-5 overflow-hidden">
+          <div className="orb orb-purple w-[min(100vw,480px)] h-[min(100vw,480px)] top-[-80px] right-[-160px] opacity-[0.22] pointer-events-none" />
+          <div className="max-w-4xl mx-auto relative z-10">
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-center mb-14"
+            >
+              <p className="ai-section-kicker mb-3">Flow</p>
+              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4 text-[var(--text)]">
+                Up and running in <span className="gradient-text">30 seconds</span>
+              </h2>
+              <p className="text-[var(--muted)] text-sm sm:text-base">No accounts. No downloads. Just music.</p>
+            </motion.div>
+
+            <div className="grid sm:grid-cols-3 gap-6 relative">
+              <div className="hidden sm:block absolute top-10 left-[16.5%] right-[16.5%] h-px bg-gradient-to-r from-[var(--primary)]/0 via-[var(--primary)]/25 to-[var(--primary)]/0" />
+              {steps.map((s, i) => (
+                <motion.div
+                  key={s.title}
+                  initial={{ opacity: 0, y: 28 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.12 }}
+                  className="flex flex-col items-center text-center"
+                >
+                  <div className="relative mb-6">
+                    <div
+                      className="w-[4.5rem] h-[4.5rem] sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center surface-3d"
+                    >
+                      <s.icon size={24} style={{ color: 'var(--primary)' }} strokeWidth={1.75} className="sm:w-[26px] sm:h-[26px]" />
+                    </div>
+                    <span
+                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full text-white text-[10px] font-black flex items-center justify-center font-mono-ui shadow-md"
+                      style={{
+                        background: 'var(--primary)',
+                        boxShadow: '0 4px 14px color-mix(in srgb, var(--primary) 28%, transparent)',
+                      }}
+                    >
+                      {i + 1}
+                    </span>
+                  </div>
+                  <h3 className="font-bold text-[var(--text)] text-[15px] mb-2">{s.title}</h3>
+                  <p className="text-[var(--muted)] text-sm leading-relaxed">{s.desc}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* STATS */}
+        <div className="relative z-[1] py-10 px-5 border-y border-[color-mix(in_srgb,var(--border)_55%,transparent)] bg-[color-mix(in_srgb,var(--surface)_32%,transparent)]">
+          <div className="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8 text-center font-mono-ui">
+            {[
+              { value: '< 1ms', label: 'Sync accuracy' },
+              { value: '∞', label: 'Devices / room' },
+              { value: '0', label: 'Downloads' },
+              { value: '100%', label: 'Free forever' },
+            ].map((s) => (
+              <div key={s.label} className="flex flex-col items-center gap-1">
+                <span className="text-2xl sm:text-3xl font-extrabold gradient-text tabular-nums">{s.value}</span>
+                <span className="text-[10px] sm:text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--faint)' }}>{s.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
-      </footer>
+
+        {/* CTA */}
+        <section className="relative z-[1] py-24 sm:py-28 px-5">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            className="max-w-xl mx-auto relative"
+          >
+            <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-[var(--primary)]/12 to-[var(--secondary)]/6 blur-2xl -z-10" />
+            <div className="relative ai-panel rounded-2xl sm:rounded-3xl p-9 sm:p-12 text-center border border-[color-mix(in_srgb,var(--primary)_18%,var(--border))]">
+              <div
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center mx-auto mb-6 btn-primary p-0 border-0"
+                style={{ boxShadow: '0 10px 28px color-mix(in srgb, var(--primary) 26%, transparent)' }}
+              >
+                <Music2 size={26} className="text-white" strokeWidth={1.5} />
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-3 text-[var(--text)]">Ready to sync up?</h2>
+              <p className="text-[var(--muted)] mb-8 max-w-sm mx-auto leading-relaxed text-sm sm:text-base">
+                Create a room, share the code, and start listening together — free, instant, no sign-up.
+              </p>
+              <button
+                type="button"
+                onClick={handleCreate}
+                className="btn-primary px-8 py-3.5 rounded-xl font-bold text-sm sm:text-base inline-flex items-center gap-2.5"
+              >
+                <Sparkles size={16} strokeWidth={2} />
+                Create a room
+              </button>
+              <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mt-6 text-[11px] font-mono-ui" style={{ color: 'var(--faint)' }}>
+                <span className="flex items-center gap-1.5"><Shield size={11} /> No account</span>
+                <span className="w-1 h-1 rounded-full opacity-60" style={{ background: 'var(--faint)' }} />
+                <span className="flex items-center gap-1.5"><Zap size={11} /> Seconds to start</span>
+              </div>
+            </div>
+          </motion.div>
+        </section>
+
+        {/* FOOTER */}
+        <footer className="relative z-[1] border-t border-[color-mix(in_srgb,var(--border)_60%,transparent)] py-12 px-5 bg-[color-mix(in_srgb,var(--surface)_28%,transparent)]">
+          <div className="max-w-5xl mx-auto">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-8">
+              <div className="flex items-center gap-3">
+                <BrandLogo size={36} />
+                <div>
+                  <p className="font-bold text-sm text-[var(--text)]">Beatsync</p>
+                  <p className="text-[10px] font-mono-ui uppercase tracking-wider" style={{ color: 'var(--faint)' }}>Open source</p>
+                </div>
+              </div>
+              <div className="flex gap-5 text-xs font-mono-ui" style={{ color: 'var(--faint)' }}>
+                <a href="/about" className="hover:text-[var(--text)] transition-colors">About</a>
+                <a href="/#features" className="hover:text-[var(--text)] transition-colors">Features</a>
+                <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:text-[var(--text)] transition-colors flex items-center gap-1">GitHub <ExternalLink size={9} /></a>
+              </div>
+            </div>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                <div className="w-full h-px bg-gradient-to-r from-transparent via-[var(--border)] to-transparent" />
+              </div>
+              <div className="relative flex justify-center">
+                <span className="px-6 inline-flex items-center gap-2 text-sm font-medium bg-[var(--bg)] text-[var(--muted)] rounded-full border border-[color-mix(in_srgb,var(--border)_70%,transparent)]">
+                  Built with
+                  <Heart
+                    size={15}
+                    className="text-red-400 fill-red-400 animate-heartbeat"
+                  />
+                  for listeners everywhere
+                </span>
+              </div>
+            </div>
+            <p className="text-center text-[10px] mt-6 font-mono-ui" style={{ color: 'var(--faint)' }}>
+              © {new Date().getFullYear()} Beatsync
+            </p>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 }

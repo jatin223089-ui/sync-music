@@ -12,16 +12,24 @@ function sameAudioUrl(loadedSrc, targetUrl) {
   }
 }
 
-export function useAudioSync(socket, roomCode, ntpOffset) {
+/** Optional spatial mix: pan / distance from virtual stage at center (0.5, 0.5). */
+/** @param {{ globalVolume?: number }} mix Host-controlled gain multiplier (0–1), default 1 */
+export function useAudioSync(socket, roomCode, ntpOffset, spatial = {}, mix = {}) {
   const audioRef = useRef(null);
   const audioCtxRef = useRef(null);
   const analyserRef = useRef(null);
   const sourceRef = useRef(null);
+  const gainUserRef = useRef(null);
+  const gainSpatialRef = useRef(null);
+  const pannerRef = useRef(null);
   const sourceCreatedForRef = useRef(null);
   const animFrameRef = useRef(null);
   const progressRef = useRef(null);
   const ntpOffsetRef = useRef(ntpOffset);
   const volumeRef = useRef(0.8);
+  const globalVolumeRef = useRef(1);
+  const spatialEnabledRef = useRef(!!spatial.enabled);
+  const spatialPositionRef = useRef(spatial.position ?? null);
   const scheduledPlayRef = useRef(null);
   const [playBlocked, setPlayBlocked] = useState(false);
 
@@ -32,6 +40,47 @@ export function useAudioSync(socket, roomCode, ntpOffset) {
   const [analyserData, setAnalyserData] = useState(new Uint8Array(64));
 
   useEffect(() => { ntpOffsetRef.current = ntpOffset; }, [ntpOffset]);
+  useEffect(() => { spatialEnabledRef.current = !!spatial.enabled; }, [spatial.enabled]);
+  useEffect(() => { spatialPositionRef.current = spatial.position ?? null; }, [spatial.position]);
+
+  const applyUserGain = useCallback(() => {
+    const gv = globalVolumeRef.current;
+    const product = volumeRef.current * gv;
+    if (gainUserRef.current) {
+      gainUserRef.current.gain.value = product;
+      if (audioRef.current) audioRef.current.volume = 1;
+    } else if (audioRef.current) {
+      audioRef.current.volume = product;
+    }
+  }, []);
+
+  useEffect(() => {
+    const raw = Number(mix.globalVolume);
+    globalVolumeRef.current = Number.isFinite(raw) ? Math.max(0, Math.min(1, raw)) : 1;
+    applyUserGain();
+  }, [mix.globalVolume, applyUserGain]);
+
+  const applySpatialToGraph = useCallback(() => {
+    const gainSp = gainSpatialRef.current;
+    if (!gainSp) return;
+    const panner = pannerRef.current;
+    if (!spatialEnabledRef.current) {
+      if (panner) panner.pan.value = 0;
+      gainSp.gain.value = 1;
+      return;
+    }
+    const p = spatialPositionRef.current;
+    const x = p && Number.isFinite(p.x) ? p.x : 0.5;
+    const y = p && Number.isFinite(p.y) ? p.y : 0.5;
+    const dx = 0.5 - x;
+    if (panner) panner.pan.value = Math.max(-1, Math.min(1, dx * 2));
+    const dist = Math.hypot(0.5 - x, 0.5 - y);
+    gainSp.gain.value = Math.max(0.22, Math.min(1, 1 - dist * 0.92));
+  }, []);
+
+  useEffect(() => {
+    applySpatialToGraph();
+  }, [spatial.enabled, spatial.position?.x, spatial.position?.y, applySpatialToGraph]);
 
   const startAnalyserLoop = useCallback(() => {
     cancelAnimationFrame(animFrameRef.current);
@@ -53,22 +102,46 @@ export function useAudioSync(socket, roomCode, ntpOffset) {
 
     if (sourceCreatedForRef.current !== audio) {
       try { sourceRef.current?.disconnect(); } catch { /* ignore */ }
+      gainUserRef.current = null;
+      gainSpatialRef.current = null;
+      pannerRef.current = null;
       try {
         const source = ctx.createMediaElementSource(audio);
+        const gainUser = ctx.createGain();
+        const gainSpatial = ctx.createGain();
         const analyser = ctx.createAnalyser();
         analyser.fftSize = 128;
-        source.connect(analyser);
-        analyser.connect(ctx.destination);
+        gainUser.gain.value = volumeRef.current * globalVolumeRef.current;
+
+        gainUserRef.current = gainUser;
+        gainSpatialRef.current = gainSpatial;
         sourceRef.current = source;
         analyserRef.current = analyser;
+
+        gainUser.connect(gainSpatial);
+
+        if (typeof ctx.createStereoPanner === 'function') {
+          const panner = ctx.createStereoPanner();
+          panner.pan.value = 0;
+          pannerRef.current = panner;
+          gainSpatial.connect(panner);
+          panner.connect(analyser);
+        } else {
+          gainSpatial.connect(analyser);
+        }
+
+        analyser.connect(ctx.destination);
+        source.connect(gainUser);
         sourceCreatedForRef.current = audio;
+        audio.volume = 1;
+        applySpatialToGraph();
       } catch {
-        // Element already has a source node attached — reuse existing
+        // Element already has a source node attached — reuse existing graph if present
       }
     }
 
     if (analyserRef.current) startAnalyserLoop();
-  }, [startAnalyserLoop]);
+  }, [startAnalyserLoop, applySpatialToGraph]);
 
   const loadAudio = useCallback((src) => {
     if (!src) return Promise.resolve();
@@ -102,11 +175,16 @@ export function useAudioSync(socket, roomCode, ntpOffset) {
       audio.addEventListener('canplay', done, { once: true });
       audio.addEventListener('error', onErr, { once: true });
       audio.src = src;
-      audio.volume = volumeRef.current;
       audio.onloadedmetadata = () => setDuration(audio.duration || 0);
       audio.ontimeupdate = () => setCurrentTime(audio.currentTime);
       audio.onended = () => setIsPlaying(false);
       setupAnalyser(audio);
+      if (gainUserRef.current) {
+        gainUserRef.current.gain.value = volumeRef.current * globalVolumeRef.current;
+        audio.volume = 1;
+      } else {
+        audio.volume = volumeRef.current * globalVolumeRef.current;
+      }
       try { audio.load(); } catch { /* ignore */ }
     });
   }, [setupAnalyser]);
@@ -194,10 +272,11 @@ export function useAudioSync(socket, roomCode, ntpOffset) {
   }, []);
 
   const setVolume = useCallback((v) => {
-    volumeRef.current = v;
-    setVolumeState(v);
-    if (audioRef.current) audioRef.current.volume = v;
-  }, []);
+    const next = Math.max(0, Math.min(1, v));
+    volumeRef.current = next;
+    setVolumeState(next);
+    applyUserGain();
+  }, [applyUserGain]);
 
   const unlockRemotePlayback = useCallback(() => {
     setPlayBlocked(false);

@@ -5,10 +5,20 @@ function readCSSVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
-export default function SpatialMap({ participants, spatialPositions, myId, onPositionChange }) {
+export default function SpatialMap({ participants, spatialPositions, myId, onPositionChange, disabled = false }) {
   const canvasRef = useRef(null);
   const [dragging, setDragging] = useState(false);
   const [myPos, setMyPos] = useState({ x: 0.5, y: 0.5 });
+
+  useEffect(() => {
+    if (dragging || !myId) return;
+    const sp = spatialPositions[myId];
+    if (sp && Number.isFinite(sp.x) && Number.isFinite(sp.y)) {
+      setMyPos((prev) => (
+        Math.abs(prev.x - sp.x) < 0.002 && Math.abs(prev.y - sp.y) < 0.002 ? prev : { x: sp.x, y: sp.y }
+      ));
+    }
+  }, [myId, spatialPositions, dragging]);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -85,23 +95,39 @@ export default function SpatialMap({ participants, spatialPositions, myId, onPos
       ctx.fill();
 
       ctx.fillStyle = '#fff';
-      ctx.font = 'bold 8px Inter, sans-serif';
+      ctx.font = 'bold 8px "JetBrains Mono", ui-monospace, monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(getInitials(p.name), px, py);
 
       ctx.fillStyle = faint;
-      ctx.font = '7px Inter, sans-serif';
+      ctx.font = '7px "JetBrains Mono", ui-monospace, monospace';
       ctx.fillText(p.name.split(' ')[0], px, py + 22);
     });
   }, [participants, spatialPositions, myId, myPos]);
 
   useEffect(() => {
+    draw();
+  }, [draw, disabled]);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
-    draw();
+    let resizeTimeout;
+    const handleResize = () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+        draw();
+      }, 100);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => {
+      clearTimeout(resizeTimeout);
+      window.removeEventListener('resize', handleResize);
+    };
   }, [draw]);
 
   const getRel = (e, canvas) => {
@@ -114,21 +140,44 @@ export default function SpatialMap({ participants, spatialPositions, myId, onPos
     };
   };
 
-  const handleDown = (e) => { setDragging(true); const p = getRel(e, canvasRef.current); setMyPos(p); onPositionChange?.(p); };
-  const handleMove = (e) => { if (!dragging) return; const p = getRel(e, canvasRef.current); setMyPos(p); onPositionChange?.(p); };
+  const handleDown = (e) => {
+    if (disabled) return;
+    setDragging(true);
+    const p = getRel(e, canvasRef.current);
+    setMyPos(p);
+    onPositionChange?.(p);
+  };
+  const handleMove = (e) => {
+    if (disabled || !dragging) return;
+    const p = getRel(e, canvasRef.current);
+    setMyPos(p);
+    onPositionChange?.(p);
+  };
   const handleUp   = () => setDragging(false);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="w-full h-full rounded-xl cursor-crosshair"
-      onMouseDown={handleDown}
-      onMouseMove={handleMove}
-      onMouseUp={handleUp}
-      onMouseLeave={handleUp}
-      onTouchStart={handleDown}
-      onTouchMove={handleMove}
-      onTouchEnd={handleUp}
-    />
+    <div className="relative w-full h-full min-h-0 rounded-xl">
+      <canvas
+        ref={canvasRef}
+        className={`w-full h-full rounded-xl ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-crosshair'}`}
+        onMouseDown={handleDown}
+        onMouseMove={handleMove}
+        onMouseUp={handleUp}
+        onMouseLeave={handleUp}
+        onTouchStart={handleDown}
+        onTouchMove={handleMove}
+        onTouchEnd={handleUp}
+      />
+      {disabled && (
+        <div
+          className="absolute inset-0 flex items-center justify-center rounded-xl pointer-events-none bg-[color-mix(in_srgb,var(--bg)_55%,transparent)]"
+          aria-hidden
+        >
+          <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--faint)' }}>
+            Off
+          </span>
+        </div>
+      )}
+    </div>
   );
 }

@@ -10,15 +10,18 @@ function generateRoomCode() {
   return code;
 }
 
-function createRoom(hostId, hostName) {
+function createRoom(hostId, hostName, options = {}) {
   let code;
   do {
     code = generateRoomCode();
   } while (rooms.has(code));
 
+  const isPublic = options.isPublic !== false;
+
   const room = {
     code,
     hostId,
+    isPublic,
     participants: [{ id: hostId, name: hostName, isHost: true, joinedAt: Date.now() }],
     playlist: [],
     currentTrack: null,
@@ -30,6 +33,10 @@ function createRoom(hostId, hostName) {
     },
     chat: [],
     spatialPositions: {},
+    /** 'everyone' | 'admins' — admins = host-only playback transport */
+    playbackPermissions: 'everyone',
+    /** Host-controlled multiplier applied by clients (0–1). */
+    globalVolume: 1,
     createdAt: Date.now(),
   };
 
@@ -112,12 +119,44 @@ function getRoomStats() {
   return { activeRooms: rooms.size, totalListeners };
 }
 
+function removeTrackFromRoom(code, index) {
+  const room = rooms.get(code);
+  if (!room) return null;
+  if (!Number.isInteger(index) || index < 0 || index >= room.playlist.length) return null;
+
+  room.playlist.splice(index, 1);
+  const ti = room.playbackState.trackIndex;
+
+  if (room.playlist.length === 0) {
+    room.playbackState.trackIndex = -1;
+    room.playbackState.isPlaying = false;
+    room.playbackState.currentTime = 0;
+    room.playbackState.startedAt = null;
+    room.currentTrack = null;
+    return room;
+  }
+
+  let newTi = ti;
+  if (index < ti) {
+    newTi = ti - 1;
+  } else if (index === ti) {
+    newTi = Math.min(ti, room.playlist.length - 1);
+    room.playbackState.currentTime = 0;
+    room.playbackState.startedAt = room.playbackState.isPlaying ? Date.now() : null;
+  }
+
+  room.playbackState.trackIndex = newTi;
+  room.currentTrack = room.playlist[newTi] || null;
+  return room;
+}
+
 module.exports = {
   createRoom,
   joinRoom,
   leaveRoom,
   getRoom,
   addTrackToRoom,
+  removeTrackFromRoom,
   updatePlayback,
   addChatMessage,
   updateSpatialPosition,
